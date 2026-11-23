@@ -234,91 +234,14 @@ button{cursor:pointer;border:0;background:none}
 .float.on{display:flex}
 .float.min{width:auto}
 .float.big{border-radius:14px;box-shadow:0 40px 90px #2c241a3a}
-/* peek：设置面板打开时缩成一条「预览条」——只露标题栏，内容完全不拦点击 */
-.float.peek{
-  width:150px;border-radius:9px;
-  box-shadow:0 6px 18px #3a322026;
-  background:#faf8f3;
+/* 悬浮小窗：始终显示实时预览。
+   在设置页时缩小 + 半透明，减少遮挡但仍能看见内容变化。 */
+.float.compact{
+  width:200px;opacity:.92;
+  box-shadow:0 10px 28px #3a32202e;
 }
-.float.peek .fbody{display:none}
-.float.peek .fhead{border-bottom:0;height:28px;cursor:grab;background:#f6f2ea}
-.float.peek .fhead .ttl{font-size:10px}
-.float.peek.min{width:auto}
-.float.min .fbody{display:none}
-.float.min .fhead{border-bottom:0}
-.fhead{
-  height:30px;display:flex;align-items:center;gap:6px;padding:0 8px;
-  border-bottom:1px solid var(--line);background:#f6f2ea;cursor:grab;user-select:none;flex:none;
-}
-.fhead.grabbing{cursor:grabbing}
-.fhead .ttl{font-size:10.5px;letter-spacing:.08em;color:#8a8173;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fhead button{width:18px;height:18px;border-radius:5px;color:#8a8173;font-size:11px;display:grid;place-items:center}
-.fhead button:hover{background:#e8e1d5;color:#4b463e}
-.fbody{overflow:hidden;background:#efece5}
-.fbody iframe{width:640px;border:0;display:block;transform-origin:top left}
-.fsnap{position:fixed;top:0;bottom:0;width:16px;z-index:59;pointer-events:none;transition:.15s}
-.fsnap.left{left:0}.fsnap.right{right:0}
-.fsnap.on{background:linear-gradient(90deg,#8b81741f,transparent)}
-
-/* ---------- 手机端 ---------- */
-.mobile-tabs{display:none}
-@media (max-width:820px){
-  .top{height:50px;padding:0 10px}
-  .brand small{display:none}
-  .btn{padding:6px 9px;font-size:11.5px}
-  .layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);height:calc(100% - 50px - 44px)}
-  .main{height:100%}
-  .pvwrap{padding:10px}
-  /* 手机端：设置与预览叠在同一区域，靠 .on 切换 */
-  .side{
-    display:none;position:absolute;inset:44px 0 0 0;z-index:25;
-    border:0;background:var(--panel);overflow-y:auto;
-  }
-  .side.on{display:block}
-  .mobile-tabs{display:flex;height:44px;border-bottom:1px solid var(--line);background:#faf8f3;position:relative;z-index:26}
-  .mobile-tabs button{flex:1;font-size:12.5px;color:#8a8173;border-bottom:2px solid transparent}
-  .mobile-tabs button.on{color:#3d3934;border-bottom-color:#5b564d;font-weight:600}
-  .tpl-grid{grid-template-columns:1fr 1fr;gap:8px}
-  .row select,.row input[type=text]{max-width:56%;flex:0 1 56%}
-  .float{width:220px}
-}
-
-/* ---------- 弹窗 ---------- */
-.modal{
-  position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
-  background:#1c1a1655;backdrop-filter:blur(3px);padding:18px;
-}
-.modal.on{display:flex}
-.modal .box{
-  background:var(--paper);border-radius:14px;width:min(560px,100%);max-height:86vh;
-  display:flex;flex-direction:column;box-shadow:0 30px 80px #0000002e;overflow:hidden;
-}
-.modal .bh{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
-.modal .bh button{margin-left:auto;font-size:16px;color:#a49b8d;width:24px;height:24px;border-radius:6px}
-.modal .bh button:hover{background:#f0ebe1}
-.modal .bb{padding:14px 16px;overflow-y:auto}
-.modal textarea{
-  width:100%;height:180px;border:1px solid var(--line);border-radius:9px;padding:10px;
-  font:11.5px/1.6 ui-monospace,monospace;resize:vertical;background:#fff;
-}
-.modal .bf{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:7px;justify-content:flex-end}
-
-
-/* ============ 底色切换 ============ */
-.tone-row{display:flex;gap:8px}
-.tone{
-  flex:1;display:flex;align-items:center;gap:8px;padding:9px 10px;
-  border:1px solid var(--line);border-radius:10px;background:#fffefa;transition:.15s;
-}
-.tone i{
-  width:26px;height:26px;border-radius:7px;flex:none;
-  box-shadow:inset 0 0 0 1px #0000001a;
-}
-.tone[data-tone="light"] i{background:#F4EDE5}
-.tone[data-tone="dark"] i{background:#1F2024}
-.tone span{font-size:12px;color:#55504a}
-.tone.on{border-color:#57534c;box-shadow:0 0 0 1px #57534c inset}
-.tone.on span{color:#2f2c28;font-weight:600}
+.float.compact .fhead{height:26px;background:#f2ece1}
+.float.compact .fhead .ttl{font-size:9.5px}
 
 /* ============ 取色器 ============ */
 .picker{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:#1b191533;backdrop-filter:blur(4px);padding:18px}
@@ -365,6 +288,28 @@ button{cursor:pointer;border:0;background:none}
 progress{width:100%;height:6px;border-radius:3px;appearance:none}
 progress::-webkit-progress-bar{background:#e8e2d7;border-radius:3px}
 progress::-webkit-progress-value{background:#6f6759;border-radius:3px}
+
+/* ============ 手机端 ============ */
+@media (max-width:820px){
+  .top{height:50px;padding:0 10px}
+  .brand small{display:none}
+  .btn{padding:6px 9px;font-size:11.5px}
+  .layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);height:calc(100% - 50px - 44px)}
+  .main{height:100%}
+  .pvwrap{padding:10px}
+  /* 设置与预览叠在同一区域，用 .on 切换 */
+  .side{
+    display:none;position:absolute;inset:44px 0 0 0;z-index:25;
+    border:0;background:var(--panel);overflow-y:auto;
+  }
+  .side.on{display:block}
+  .mobile-tabs{display:flex;height:44px;border-bottom:1px solid var(--line);background:#faf8f3;position:relative;z-index:26}
+  .mobile-tabs button{flex:1;font-size:12.5px;color:#8a8173;border-bottom:2px solid transparent}
+  .mobile-tabs button.on{color:#3d3934;border-bottom-color:#5b564d;font-weight:600}
+  .tpl-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .row select,.row input[type=text]{max-width:56%;flex:0 1 56%}
+  .float{width:220px}
+}
 </style>
 </head>
 <body>
@@ -2272,43 +2217,45 @@ async function exportVideo() {
    核心：只要用户在看 / 改设置，小窗就缩到角落（peek），
    不能挡住控件；切到预览时再展开。
    小窗自己也不接受 pointer 事件以外的东西，避免和滚动打架。 */
+/* 悬浮小窗永远显示内容。
+   在设置页时只缩小 + 半透明，仍然实时渲染，方便边调边看。 */
 function setPeek(on) {
   var fw = $('floatWin');
   if (!fw.classList.contains('on')) return;
-  var was = fw.classList.contains('peek');
-  fw.classList.toggle('peek', !!on);
-  if (!!on === was) return;
-  /* 缩小时往最近的角靠，展开时回到右上 */
-  var vw = window.innerWidth;
+  var was = fw.classList.contains('compact');
+  fw.classList.toggle('compact', !!on);
+  /* 从折叠恢复成展开时，宽度要还原 */
+  if (!on) fw.style.width = '';
+
   if (on) {
     fw.classList.remove('big');
     fw.style.transform = '';
     if (window.innerWidth <= 820) {
-      /* 手机：贴到右下角，只留一条很窄的条 */
-      fw.style.width = '112px';
       fw.style.left = 'auto';
       fw.style.right = '10px';
       fw.style.top = 'auto';
-      fw.style.bottom = '12px';
+      fw.style.bottom = '86px';
+      fw.style.width = '176px';
     } else {
-      var r = fw.getBoundingClientRect();
-      fw.style.left = (vw - fw.offsetWidth - 18) + 'px';
-      fw.style.top = Math.max(70, Math.min(r.top, window.innerHeight - 200)) + 'px';
+      var vw = window.innerWidth;
+      fw.style.right = 'auto';
+      fw.style.left = (vw - (fw.offsetWidth || 200) - 20) + 'px';
+      fw.style.top = '86px';
     }
   } else {
     if (window.innerWidth <= 820) {
-      fw.style.width = '';
       fw.style.right = '10px';
       fw.style.bottom = 'auto';
       fw.style.top = '76px';
       fw.style.left = 'auto';
+      fw.style.width = '';
     } else {
       fw.style.right = 'auto';
-      fw.style.left = (vw - fw.offsetWidth - 28) + 'px';
+      fw.style.left = (window.innerWidth - (fw.offsetWidth || 340) - 28) + 'px';
       fw.style.top = '86px';
     }
   }
-  setTimeout(fitFloat, 80);
+  if (was !== !!on) setTimeout(fitFloat, 80);
 }
 
 /* 小窗只在「配置」时存在：
@@ -2330,12 +2277,10 @@ function refreshPeek() {
       }
     }
   } else {
-    /* 桌面：只在初次进入时自动开一次，之后尊重用户手动关闭 */
-    if (!window.__floatAutoDone) {
-      window.__floatAutoDone = true;
-      if (!fw.classList.contains('on')) openFloat(true);
-    } else if (fw.classList.contains('on')) {
-      setPeek(true);
+    /* 桌面：右侧已有大预览，小窗不需要 —— 强制关掉 */
+    if (fw.classList.contains('on')) {
+      fw.classList.remove('on');
+      $('fPreview').dataset.loaded = '';
     }
   }
 }
@@ -2392,10 +2337,14 @@ function fitFloat() {
   var f = $('fPreview');
   var body = $('fbody');
   var fw = $('floatWin');
-  /* 手机端窗口更窄一点，别挡住整个屏幕 */
-  if (window.innerWidth <= 820 && !fw.classList.contains('big')) {
+  /* 尺寸优先级：大窗 > 紧凑（设置页）> 正常 */
+  if (fw.classList.contains('big')) {
+    /* 大窗尺寸由 fmax 控制，这里不动 */
+  } else if (fw.classList.contains('compact')) {
+    fw.style.width = (window.innerWidth <= 820 ? 176 : 200) + 'px';
+  } else if (window.innerWidth <= 820) {
     fw.style.width = Math.min(240, window.innerWidth - 48) + 'px';
-  } else if (!fw.classList.contains('big')) {
+  } else {
     fw.style.width = '';
   }
   var boxW = Math.max(120, fw.clientWidth - 2);
@@ -2758,7 +2707,12 @@ function bindUI() {
 
   bindPicker();
   bindFloatDrag();
-  window.addEventListener('resize', function () { fitZoom(); });
+  window.addEventListener('resize', function () {
+    fitZoom();
+    var fb = $('btnFloat');
+    if (fb) fb.style.display = window.innerWidth > 820 ? 'none' : '';
+    refreshPeek();
+  });
 }
 
 /* ---------- 启动 ---------- */
@@ -2774,6 +2728,11 @@ function boot() {
   currentTpl = templates.find(function (t) { return t.count === 3 && !t.motion; }) || templates[0];
   selectTemplate(currentTpl);
   bindUI();
+  /* 桌面不需要悬浮窗入口：藏掉「浮」按钮 */
+  (function () {
+    var fb = $('btnFloat');
+    if (fb && window.innerWidth > 820) fb.style.display = 'none';
+  })();
   try { buildSwatches(); } catch (e) {}
   /* 能力检测：不支持的能力直接说明，而不是点了没反应 */
   if (!videoSupported()) {
@@ -2783,10 +2742,12 @@ function boot() {
     if (st) st.textContent = '提示：当前浏览器不支持视频录制，PNG 导出不受影响。';
   }
   setTimeout(fitZoom, 400);
-  /* 进入页面就打开小窗，不等切到预览 */
+  /* 只有手机（窄屏）需要悬浮小窗；桌面用右侧大预览 */
   setTimeout(function () {
-    openFloat(true);
-    setTimeout(refreshPeek, 300);
+    if (window.innerWidth <= 820) {
+      openFloat(true);
+      setTimeout(refreshPeek, 300);
+    }
   }, 260);
 }
 boot();
