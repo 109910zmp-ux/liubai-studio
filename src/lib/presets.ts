@@ -1,0 +1,123 @@
+import type { ParamValues } from "./types"
+
+export interface StylePreset {
+  key: string
+  name: string
+  desc: string
+  values: ParamValues
+}
+
+// Each preset only stores values that differ from the template defaults.
+// Applying one replaces the whole params object, so untouched keys fall back
+// to the template definition and switching presets is deterministic.
+export const STYLE_PRESETS: StylePreset[] = [
+  {
+    key: "default",
+    name: "原始",
+    desc: "恢复模板默认参数",
+    values: {},
+  },
+  {
+    key: "editorial",
+    name: "杂志感",
+    desc: "规整网格 · 细线卡片 · 克制点缀",
+    values: {
+      enable3D: false,
+      layoutStyle: "grid",
+      edgeGroup: "line",
+      shotRadius: 2,
+      posterRadius: 4,
+      cardShadow: 18,
+      deco: "off",
+      showSeal: false,
+      showBrowserChrome: true,
+      showFooter: true,
+      showCaptions: true,
+      showDayNight: false,
+      watermark: "off",
+      maskStyle: "none",
+    },
+  },
+  {
+    key: "gallery",
+    name: "极简展映",
+    desc: "3D 侧翼 · 无展台 · 去掉冗余装饰",
+    values: {
+      enable3D: true,
+      layout3dMode: "coverflow",
+      pace: "even",
+      ledge: "none",
+      showDots: false,
+      showCapsNum: false,
+      deep3D: false,
+      deco: "off",
+      showSeal: false,
+      showBrowserChrome: false,
+      showFooter: false,
+      showCaptions: false,
+      watermark: "off",
+      maskStyle: "none",
+      shotRadius: 2,
+      posterRadius: 6,
+      cardShadow: 30,
+      edgeGroup: "def",
+    },
+  },
+  {
+    key: "film",
+    name: "胶片颗粒",
+    desc: "颗粒质感 · 错落排布 · 宋体水印",
+    values: {
+      enable3D: false,
+      layoutStyle: "wave",
+      offsetY: 44,
+      edgeGroup: "mat",
+      shotRadius: 6,
+      posterRadius: 14,
+      cardShadow: 72,
+      deco: "dotstar",
+      showSeal: true,
+      showBrowserChrome: true,
+      showFooter: true,
+      showCaptions: true,
+      showDayNight: true,
+      watermark: "on",
+      watermarkText: "留白",
+      watermarkFont: "song",
+      watermarkOpacity: 10,
+      maskStyle: "grain",
+      maskStrength: 60,
+    },
+  },
+  {
+    key: "glass",
+    name: "玻璃拟态",
+    desc: "磨砂玻璃 · 柔光高光 · 大圆角",
+    values: {
+      enable3D: true,
+      layout3dMode: "stack",
+      pace: "drift",
+      ledge: "shelf3d",
+      showDots: true,
+      showCapsNum: true,
+      deep3D: true,
+      customEdge: true,
+      borderWidth: 2,
+      glassOpacity: 42,
+      glassSheen: 80,
+      shadowSoft: 30,
+      edgeGroup: "glass",
+      shotRadius: 14,
+      posterRadius: 18,
+      cardShadow: 36,
+      deco: "blur",
+      showSeal: true,
+      showBrowserChrome: true,
+      showFooter: false,
+      showCaptions: true,
+      watermark: "off",
+      maskStyle: "frost",
+      maskStrength: 30,
+    },
+  },
+]

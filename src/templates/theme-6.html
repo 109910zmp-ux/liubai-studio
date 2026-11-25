@@ -1,0 +1,2707 @@
+<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=640">
+<meta name="reeden-template-version" content="1">
+<meta name="reeden-template-name" content="留白 · 6图">
+<meta name="reeden-template-type" content="themePreview">
+<meta name="reeden-template-width" content="640">
+<meta name="reeden-template-screens" content="[{&quot;id&quot;: &quot;d0&quot;, &quot;label&quot;: &quot;Home&quot;, &quot;page&quot;: &quot;home&quot;}, {&quot;id&quot;: &quot;d1&quot;, &quot;label&quot;: &quot;Shelf&quot;, &quot;page&quot;: &quot;bookshelf&quot;}, {&quot;id&quot;: &quot;d2&quot;, &quot;label&quot;: &quot;Reader&quot;, &quot;page&quot;: &quot;reader&quot;}, {&quot;id&quot;: &quot;d3&quot;, &quot;label&quot;: &quot;Stats&quot;, &quot;page&quot;: &quot;statistics&quot;}, {&quot;id&quot;: &quot;d4&quot;, &quot;label&quot;: &quot;Profile&quot;, &quot;page&quot;: &quot;profile&quot;}, {&quot;id&quot;: &quot;d5&quot;, &quot;label&quot;: &quot;Splash&quot;, &quot;page&quot;: &quot;splash&quot;}]">
+<!-- ============================================================
+     来源说明
+     ------------------------------------------------------------
+     空间布局中 coverflow / ring / fan / stack 的坐标算法，参考了
+     CSS 3D Gallery（gallery.js）。参考包内未附 LICENSE 与作者信息，
+     具体版本与授权条款待确认，公开发布前请补上原作者署名与许可。
+     其余部分来源待逐一核实，未在此标注不代表原创。
+     ============================================================ -->
+
+<!-- 静态图版：不声明 reeden-template-output，Reeden 按 PNG 导出 -->
+
+<!-- ============ 展映（总开关 + 布局 + 节奏） ============ -->
+<meta data-red-param="param.enable3D" data-red-type="switch" data-red-label="启用 3D 展映" data-red-default="false" data-red-group="展映">
+<meta data-red-param="param.layout3dMode" data-red-type="select" data-red-label="展映布局" data-red-options="coverflow:Coverflow 侧翼,ring:Ring 环形 · 宽松,ringTight:Ring 环形 · 相接,fan:Fan 扇形,stack:Stack 景深,carousel:Carousel 圆弧,helix:Helix 螺旋,tunnel:Tunnel 隧道,arc:Arc 拱形" data-red-default="coverflow" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.pace" data-red-type="select" data-red-label="轮播节奏" data-red-options="auto:跟随布局,hold:停顿后走,even:匀速,drift:连续缓漂,slow:慢 · 每张 6 秒,normal:中 · 每张 4 秒,fast:快 · 每张 2.5 秒" data-red-default="auto" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.ledge" data-red-type="select" data-red-label="展台" data-red-options="mode:跟随布局（推荐）,none:不画展台,shelf:展台 · 平面,shelf3d:展台 · 立体" data-red-default="mode" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.ledgeColor" data-red-type="color" data-red-label="展台颜色（留空自动）" data-red-default="" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.showDots" data-red-type="switch" data-red-label="页码圆点（关则显示速度线）" data-red-default="false" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.showCapsNum" data-red-type="switch" data-red-label="显示展签序号（I / II / III）" data-red-default="true" data-red-group="展映" data-red-when="param.enable3D">
+<meta data-red-param="param.deep3D" data-red-type="switch" data-red-label="展开细调（关则用布局调好的值）" data-red-default="false" data-red-group="展开 · 细调">
+<!-- ============ 展开 · 细调（分三组：空间 / 动效 / 卡片） ============ -->
+<meta data-red-param="param.chordGroup" data-red-type="select" data-red-label="空间" data-red-options="def:跟随布局（推荐）,angle:调外张角度,depth:调景深,spacing:调间距,float:调浮动,pitch:调俯仰,all:全部手调" data-red-default="def" data-red-group="空间" data-red-when="param.deep3D">
+<meta data-red-param="param.angle" data-red-type="range" data-red-label="卡片外张角度（°）" data-red-min="0" data-red-max="60" data-red-step="1" data-red-default="32" data-red-group="空间" data-red-when="param.chordGroup=angle|all">
+<meta data-red-param="param.depth" data-red-type="range" data-red-label="空间景深" data-red-min="0" data-red-max="180" data-red-step="5" data-red-default="70" data-red-group="空间" data-red-when="param.chordGroup=depth|all">
+<meta data-red-param="param.spacing" data-red-type="range" data-red-label="卡片间距" data-red-min="0" data-red-max="100" data-red-step="2" data-red-default="28" data-red-group="空间" data-red-when="param.chordGroup=spacing|all">
+<meta data-red-param="param.floatAmp" data-red-type="range" data-red-label="浮动幅度（px）" data-red-min="0" data-red-max="10" data-red-step="0.5" data-red-default="2.6" data-red-group="空间" data-red-when="param.chordGroup=float|all">
+<meta data-red-param="param.pitch" data-red-type="range" data-red-label="整组俯仰（°，正为俯视）" data-red-min="-16" data-red-max="16" data-red-step="1" data-red-default="0" data-red-group="空间" data-red-when="param.chordGroup=pitch|all">
+
+<meta data-red-param="param.motionGroup" data-red-type="select" data-red-label="动效" data-red-options="def:跟随布局（推荐）,curve:改推进手感,fog:改远近层次,all:两者都改" data-red-default="def" data-red-group="动效" data-red-when="param.deep3D">
+<meta data-red-param="param.seekCurve" data-red-type="select" data-red-label="推进手感" data-red-options="mode:跟随布局,outExpo:急停甩入,outCubic:柔和减速,outBack:带一点回弹,inOutCubic:缓入缓出,linear:匀速" data-red-default="mode" data-red-group="动效" data-red-when="param.motionGroup=curve|all">
+<meta data-red-param="param.depthFog" data-red-type="range" data-red-label="远处雾化（%）" data-red-min="0" data-red-max="80" data-red-step="5" data-red-default="30" data-red-group="动效" data-red-when="param.motionGroup=fog|all">
+<meta data-red-param="param.focusBlur" data-red-type="range" data-red-label="非焦点虚化（px）" data-red-min="0" data-red-max="4" data-red-step="0.5" data-red-default="0.8" data-red-group="动效" data-red-when="param.motionGroup=fog|all">
+
+
+<!-- ============ 水印与质感 ============ -->
+
+
+
+
+
+
+
+<!-- ============ 外观 ============ -->
+
+<meta data-red-param="param.customEdge" data-red-type="switch" data-red-label="自定义边缘" data-red-default="false" data-red-group="自定义" data-red-when="param.deep3D">
+<meta data-red-param="param.borderWidth" data-red-type="range" data-red-label="边缘宽度（px）" data-red-min="2" data-red-max="14" data-red-step="1" data-red-default="4" data-red-group="自定义" data-red-when="param.customEdge">
+<meta data-red-param="param.borderColor" data-red-type="color" data-red-label="边缘颜色（留空自动）" data-red-default="" data-red-group="自定义" data-red-when="param.customEdge">
+<meta data-red-param="param.glassOpacity" data-red-type="range" data-red-label="玻璃通透度（%）" data-red-min="6" data-red-max="60" data-red-step="2" data-red-default="20" data-red-group="自定义" data-red-when="param.customEdge">
+<meta data-red-param="param.glassSheen" data-red-type="range" data-red-label="玻璃高光（%）" data-red-min="0" data-red-max="100" data-red-step="5" data-red-default="55" data-red-group="自定义" data-red-when="param.customEdge">
+<meta data-red-param="param.shadowSoft" data-red-type="range" data-red-label="投影柔度（px）" data-red-min="0" data-red-max="40" data-red-step="2" data-red-default="18" data-red-group="自定义" data-red-when="param.customEdge">
+
+<meta data-red-param="param.watermark" data-red-type="select" data-red-label="水印" data-red-options="off:不显示,on:显示水印" data-red-default="off" data-red-group="水印与质感">
+<meta data-red-param="param.watermarkText" data-red-type="text" data-red-label="水印文字" data-red-placeholder="留空用「主题名 @分享者」" data-red-default="" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.watermarkFont" data-red-type="select" data-red-label="水印字体" data-red-options="auto:跟随模板标题,song:宋体 · 思源宋体,kai:楷体,yuan:圆体 · 苹方圆,hei:黑体 · 苹方,serif:西文衬线,mono:等宽" data-red-default="auto" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.watermarkFontFile" data-red-type="font" data-red-label="自定义水印字体" data-red-placeholder="上传 .ttf/.otf/.woff 字体" data-red-default="" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.watermarkOpacity" data-red-type="range" data-red-label="水印浓度（%）" data-red-min="4" data-red-max="40" data-red-step="1" data-red-default="12" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.watermarkImage" data-red-type="image" data-red-label="水印图片" data-red-placeholder="上传一张图片作平铺水印" data-red-default="" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.watermarkImageScale" data-red-type="range" data-red-label="图片水印大小（%）" data-red-min="20" data-red-max="300" data-red-step="10" data-red-default="100" data-red-group="水印与质感" data-red-when="param.watermark=on">
+<meta data-red-param="param.maskStyle" data-red-type="select" data-red-label="截图质感" data-red-options="none:不开启,frost:霜雾柔化,halftone:网点印刷,engrave:银雕横纹,linen:亚麻织纹,grain:胶片颗粒,stipple:点刻版画,crosshatch:交叉排线" data-red-default="none" data-red-group="水印与质感">
+<meta data-red-param="param.maskStrength" data-red-type="range" data-red-label="质感强度" data-red-min="0" data-red-max="100" data-red-step="5" data-red-default="45" data-red-group="水印与质感" data-red-when="param.maskStyle=frost|halftone|engrave|linen|grain|stipple|crosshatch">
+
+<meta data-red-param="param.deco" data-red-type="select" data-red-label="点缀" data-red-options="auto:随机（默认）,off:不开启,sparkle:星芒,dotstar:星点,outline:线描,blur:柔光,note:音符,confetti:碎星" data-red-default="auto" data-red-group="外观">
+<meta data-red-param="param.showSeal" data-red-type="switch" data-red-label="显示右侧封签" data-red-default="true" data-red-group="外观">
+<meta data-red-param="param.showBrowserChrome" data-red-type="switch" data-red-label="显示浏览器顶栏" data-red-default="true" data-red-group="外观">
+<meta data-red-param="param.showFooter" data-red-type="switch" data-red-label="显示页脚版权" data-red-default="true" data-red-group="外观">
+<meta data-red-param="param.showCaptions" data-red-type="switch" data-red-label="显示图注" data-red-default="true" data-red-group="外观">
+
+
+<meta data-red-param="param.overrideAccent" data-red-type="color" data-red-label="覆盖强调色（留空跟主题）" data-red-default="" data-red-group="外观">
+<meta data-red-param="param.shotRadius" data-red-type="range" data-red-label="截图圆角（px）" data-red-min="0" data-red-max="16" data-red-step="1" data-red-default="4" data-red-group="卡片外观">
+<meta data-red-param="param.posterRadius" data-red-type="range" data-red-label="整页圆角（px）" data-red-min="0" data-red-max="24" data-red-step="1" data-red-default="10" data-red-group="卡片外观">
+<meta data-red-param="param.cardShadow" data-red-type="range" data-red-label="投影强度" data-red-min="0" data-red-max="100" data-red-step="5" data-red-default="55" data-red-group="卡片外观" data-red-when="param.edgeGroup=def">
+<meta data-red-param="param.edgeGroup" data-red-type="select" data-red-label="图片样式" data-red-options="def:只投影,line:细线,mat:卡片边,glass:磨砂玻璃" data-red-default="def" data-red-group="卡片外观">
+
+<!-- ============ 自定义（边缘的细部，默认不动） ============ -->
+
+
+
+<!-- ============ 截图质感 ============ -->
+
+
+
+<!-- ============ 图文排版 ============ -->
+<meta data-red-param="param.titleFont" data-red-type="font" data-red-label="自定义标题字体" data-red-placeholder="上传 .ttf/.otf/.woff 字体" data-red-default="" data-red-group="图文排版">
+<meta data-red-param="param.layoutStyle" data-red-type="select" data-red-label="静态网格排布" data-red-options="grid:整齐两行,row6:一行六列,wave:波浪错落,scatter:散落" data-red-default="grid" data-red-group="图文排版" data-red-when="!param.enable3D">
+<meta data-red-param="param.offsetY" data-red-type="range" data-red-label="错落幅度" data-red-min="0" data-red-max="60" data-red-step="4" data-red-default="30" data-red-group="图文排版" data-red-when="param.layoutStyle=wave|scatter">
+<meta data-red-param="param.captionLang" data-red-type="select" data-red-label="图注语言" data-red-options="auto:自动（跟随你的命名）,en:英文,zh:中文" data-red-default="auto" data-red-group="图文排版">
+<meta data-red-param="param.showDayNight" data-red-type="switch" data-red-label="混搭时标注日夜" data-red-default="true" data-red-group="图文排版" data-red-when="param.showCaptions">
+<title>留白 · 6图</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{margin:0;padding:0;background:transparent}
+body{width:640px;min-height:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;-webkit-font-smoothing:antialiased}
+
+/* ============================================================
+   以下 CSS 完全沿用你原「六图终版」，逐字保留
+   ============================================================ */
+#deskBg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .25s ease;background-size:cover;background-position:center;background-repeat:no-repeat}
+#deskTint{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .25s ease;background:var(--tintPaper)}
+.poster.has-bg #deskBg{opacity:1}
+.poster.has-bg:not(.is-plain) #deskTint{opacity:1}
+
+.poster{
+  width:640px;max-width:640px;margin:0 auto;padding:0;
+  position:relative;overflow:hidden;
+  border-radius:var(--poster-r,10px);background:transparent;
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  --chrome:#fff;
+  --topbar:linear-gradient(#F6F6F6,#EEEEEE);
+  --chromeLine:#E2E2E2;
+  --chromeBtn:#FFF;
+  --chromeMute:#9C9C98;
+  --chromeInk:#3C3C38;
+  --shotBg:#FFF;
+  --sealLine:rgba(255,255,255,.62);
+  --sealHi:rgba(255,255,255,.66);
+  --glassHi:rgba(255,255,255,.72);
+  --glassLo:rgba(255,255,255,.10);
+}
+.poster.is-dark{
+  --chrome:#1E1F22;--topbar:#26282C;--chromeLine:#34373C;--chromeBtn:#2E3136;
+  --chromeMute:#8E8A84;--chromeInk:#D5CFC6;--shotBg:#1A1B1E;
+  --sealLine:rgba(255,255,255,.16);--sealHi:rgba(255,255,255,.14);
+}
+.win{position:relative;z-index:1;background:var(--chrome);border-radius:var(--poster-r,10px);overflow:hidden;isolation:isolate;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.top{display:flex;align-items:center;gap:9px;padding:0 13px;height:42px;position:relative;z-index:3;background:var(--topbar);border-bottom:1px solid var(--chromeLine)}
+.lights{display:flex;gap:5.5px;flex-shrink:0}
+.lights i{width:9px;height:9px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#F2604C}
+.lights i:nth-child(2){background:#F5BE3D}
+.lights i:nth-child(3){background:#4FC22F}
+.nav{display:flex;gap:4px;flex-shrink:0}
+.nav b{width:21px;height:21px;border-radius:50%;background:var(--chromeBtn);border:1px solid var(--chromeLine);display:flex;align-items:center;justify-content:center}
+.nav b svg{width:7px;height:7px;stroke:#8C8C8C;stroke-width:2.2;fill:none}
+.spacer{width:2px;flex-shrink:0}
+.urlbox{flex:1;min-width:0;height:26px;border-radius:5px;background:var(--chromeBtn);border:1px solid var(--chromeLine);display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px}
+.urlbox .mode{flex:none;width:7.2pt;height:7.2pt;display:block}
+.urlbox .mode svg{width:100%;height:100%;display:block;stroke:#8C8C8C;stroke-width:1.5;fill:none}
+.urlbox .host{font-family:var(--mono);font-size:8.6px;letter-spacing:.02em;color:var(--chromeMute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.urlbox .host em{font-style:normal;color:var(--chromeInk)}.urlbox .urlby{opacity:.55;font-size:9px}
+.acts{display:flex;gap:7px;flex-shrink:0;align-items:center}
+.acts svg{width:12px;height:12px;stroke:#8C8C8C;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.page{position:relative;padding:20px 42px 16px 42px;background:var(--paper,#fff)}
+.deco{position:absolute;inset:0;z-index:1;pointer-events:none;line-height:0;overflow:hidden}
+.poster.has-bg .deco{opacity:.55}
+.deco svg{display:block;width:100%;height:100%}
+.hd{position:relative;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.name{font-family:var(--title);font-size:26px;line-height:1.22;font-weight:600;letter-spacing:.005em;color:var(--ink);max-width:100%;word-break:break-word}
+.name .maker{display:block;font-family:var(--mono);font-size:10.6px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:9px;line-height:1.25}
+.name .maker[data-cjk="1"]{font-family:var(--title);font-weight:500;letter-spacing:.08em;text-transform:none;font-size:11px}
+.intro{position:relative;z-index:2;margin-top:7px;font-family:var(--title);font-size:11.8px;line-height:1.62;color:var(--mute);max-width:100%;white-space:normal;word-break:break-word}
+
+/* 静态网格 */
+.trio{
+  position:relative;z-index:2;
+  display:grid;
+  grid-template-columns:repeat(var(--cols,3), 1fr);
+  justify-items:center;align-items:start;
+  column-gap:12px;row-gap:24px;margin-top:19px;
+}
+.shot{position:relative;line-height:0;border-radius:var(--shot-r,4px);overflow:hidden;background:var(--shotBg);box-shadow:0 1px 1px rgba(0,0,0,.05),0 8px 18px -7px rgba(0,0,0,.26);outline:1px solid rgba(0,0,0,.055);outline-offset:-1px}
+.shot img{width:100%;height:100%;object-fit:contain;display:block}
+/* 截图边缘：默认「无」，只有投影。
+   命名按「加的是什么」而不是按颜色：
+   line = 一条线；mat = 一圈卡纸（会把画面撑开）；glass = 一圈磨砂玻璃（取封签的质感） */
+html[data-param-shot-border="none"] .shot{padding:0;background:none}
+/* 投影：强度与柔度两者都由变量控制，边缘档位只叠加自己的内描边 */
+html body .shot, html body .trio.is-3d .card3d, html body .poster.is-dark .trio.is-3d .card3d{box-shadow:0 calc(4px + var(--shsoft,18px) * .35) calc(10px + var(--shsoft,18px)) rgba(0,0,0,calc(var(--card-sh,.55) * .46))}
+html[data-param-shot-border="line"] .shot{padding:0;background:none;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--bd,#1a1a1a) 26%, transparent)}
+html[data-param-shot-border="mat"] .shot{padding:var(--bdw,4px);background:var(--bd,#fff);box-shadow:0 0 0 1px color-mix(in srgb, var(--ink,#000) 7%, transparent)}
+html[data-param-shot-border="mat"] .shot img{border-radius:calc(var(--shot-r,4px) - 1px)}
+/* 磨砂玻璃：与封签同一套语汇 —— 通透度 / 高光都由「自定义」控制 */
+html[data-param-shot-border="glass"] .shot{
+  padding:var(--bdw,4px);
+  background:linear-gradient(155deg, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.20) * 170%), transparent) 0%, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.20) * 60%), transparent) 62%, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.20) * 120%), transparent) 100%);
+  border:1px solid color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.20) * 275%), transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,var(--gsheen,.55)),0 1px 2px rgba(0,0,0,.06);
+}
+html[data-param-shot-border="glass"] .shot img{border-radius:calc(var(--shot-r,4px) - 2px)}
+
+/* 3D 卡片沿用同一套「图片样式」—— 静态网格什么样，3D 里就什么样 */
+.trio.is-3d .card3d{overflow:visible}
+html[data-param-shot-border="none"] .trio.is-3d .card3d{padding:0;background:none}
+html[data-param-shot-border="line"] .trio.is-3d .card3d{padding:0;background:none;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--bd,#1a1a1a) 26%, transparent),0 calc(4px + var(--shsoft,18px) * .35) calc(10px + var(--shsoft,18px)) rgba(0,0,0,calc(var(--card-sh,.55) * .46))}
+html[data-param-shot-border="mat"] .trio.is-3d .card3d{padding:var(--bdw,4px);background:var(--bd,#fff);box-shadow:0 0 0 1px color-mix(in srgb, var(--ink,#000) 7%, transparent),0 calc(4px + var(--shsoft,18px) * .35) calc(10px + var(--shsoft,18px)) rgba(0,0,0,calc(var(--card-sh,.55) * .46))}
+html[data-param-shot-border="mat"] .trio.is-3d .card3d img{border-radius:calc(var(--shot-r,4px) - 1px)}
+html[data-param-shot-border="glass"] .trio.is-3d .card3d{
+  padding:var(--bdw,4px);
+  background:linear-gradient(155deg, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.2) * 170%), transparent) 0%, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.2) * 60%), transparent) 62%, color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.2) * 120%), transparent) 100%);
+  border:1px solid color-mix(in srgb, var(--bd,#fff) calc(var(--gop,.2) * 275%), transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,var(--gsheen,.55)),0 calc(4px + var(--shsoft,18px) * .35) calc(10px + var(--shsoft,18px)) rgba(0,0,0,calc(var(--card-sh,.55) * .46));
+}
+html[data-param-shot-border="glass"] .trio.is-3d .card3d img{border-radius:calc(var(--shot-r,4px) - 2px)}
+/* 卡框会占掉内边距，图要按内容盒铺满 */
+html[data-param-shot-border="line"] .trio.is-3d .card3d,
+html[data-param-shot-border="none"] .trio.is-3d .card3d,
+html[data-param-shot-border="mat"] .trio.is-3d .card3d,
+html[data-param-shot-border="glass"] .trio.is-3d .card3d{box-sizing:border-box}
+html[data-param-shot-border="line"] .trio.is-3d .card3d img,
+html[data-param-shot-border="none"] .trio.is-3d .card3d img,
+html[data-param-shot-border="mat"] .trio.is-3d .card3d img,
+html[data-param-shot-border="glass"] .trio.is-3d .card3d img{width:100%;height:100%}
+html[data-param-shot-border="glass"] .shot::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(150deg, rgba(255,255,255,calc(var(--gsheen,.55) * .33)), rgba(255,255,255,0) 46%);
+}
+
+/* 投影：强度 × 柔度，两档（0 强度时完全无影） */
+.shot .empty{
+  width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;
+  background:#FAFAF8;color:#C0C0BC;
+  border:1px dashed rgba(0,0,0,.18);
+  border-radius:inherit;
+}
+.shot .empty .empty-lbl{
+  font-family:var(--title);font-size:12px;letter-spacing:.04em;
+  color:var(--mute);opacity:.92;
+}
+.shot .empty .empty-sub{
+  font-family:var(--mono);font-size:7.4px;letter-spacing:.14em;
+  text-transform:uppercase;color:#A8A8A4;
+}
+.cap{display:flex;align-items:baseline;justify-content:center;gap:5px;margin-top:7px;font-family:var(--mono);font-size:7.4px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);white-space:nowrap;overflow:hidden}
+.cap em{font-style:italic;font-family:var(--latin);font-size:13.6px;line-height:1;letter-spacing:.01em;color:var(--accent);text-transform:none}
+.cap s{text-decoration:none;opacity:.72;letter-spacing:.06em}
+.cap s b{font-weight:400;margin-left:3px;color:var(--accent);opacity:.95}
+.cap[data-lang="zh"] s{font-family:var(--title)}
+
+.foot{position:relative;z-index:2;display:flex;align-items:baseline;justify-content:flex-end;gap:6px;margin-top:10px;padding-right:1px;font-family:var(--mono);color:var(--mute)}
+.foot .cr{font-size:7.4px;letter-spacing:.04em;opacity:.55;margin-left:4px}
+.foot .c{font-family:var(--latin);font-style:italic;font-size:8.2pt;line-height:1;color:var(--accent);opacity:.85}
+.foot .a{font-family:var(--title);font-size:7.9pt;letter-spacing:.04em;color:var(--mute);opacity:.9;max-width:72%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.seal{position:absolute;right:0;bottom:46px;z-index:3;display:flex;flex-direction:column;align-items:center;gap:8px;padding:9px 4px 8px;width:max-content;max-width:34px;max-height:var(--sealMax,300px);overflow:hidden;background:var(--sealBg);border:1px solid var(--sealLine,rgba(255,255,255,.62));border-right:0;border-radius:5px 0 0 5px;box-shadow:inset 0 1px 0 var(--sealHi,rgba(255,255,255,.66)),-2px 2px 8px -2px rgba(0,0,0,.10);transform:rotate(-.4deg)}
+.seal .who{writing-mode:vertical-rl;text-orientation:upright;font-family:var(--title);font-size:8.4px;letter-spacing:.12em;line-height:1.34;color:var(--sealWho);max-height:none;overflow:hidden}
+.seal .who[data-h="1"]{writing-mode:horizontal-tb;text-orientation:mixed;letter-spacing:0;line-height:1.14;display:flex;flex-direction:column;align-items:center;gap:1px}
+.seal .who[data-h="1"] i{display:block;font-style:normal;line-height:1}
+.seal .who[data-clipped="1"]{-webkit-mask-image:linear-gradient(to bottom,#000 70%,rgba(0,0,0,.15) 100%);mask-image:linear-gradient(to bottom,#000 70%,rgba(0,0,0,.15) 100%)}
+.seal .note{writing-mode:vertical-rl;font-family:"Hiragino Mincho ProN","Yu Mincho","Songti SC",serif;font-size:6.4px;letter-spacing:.26em;line-height:1;color:var(--sealNote);opacity:.88}
+
+@keyframes lightBreathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.28)}}
+.lights i:nth-child(1){animation:lightBreathe 3.6s ease-in-out infinite}
+.lights i:nth-child(2){animation:lightBreathe 3.6s ease-in-out infinite;animation-delay:-1.2s}
+.lights i:nth-child(3){animation:lightBreathe 3.6s ease-in-out infinite;animation-delay:-2.4s}
+@keyframes cursorBlink{0%,45%{opacity:1}55%,100%{opacity:.28}}
+.urlbox{position:relative}
+html .urlbox::after{display:none!important}
+.urlbox .host{padding-right:6px}
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}}
+.name{animation:breathe 7s ease-in-out infinite}
+.intro{animation:breathe 7s ease-in-out infinite;animation-delay:-4.8s}
+@keyframes decoDrift{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(0,-6px,0) scale(1.012)}}
+.deco{transform-origin:50% 50%;animation:decoDrift 18s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.lights i,.urlbox::after,.name,.intro,.deco{animation:none}.urlbox::after{display:none}}
+html[data-param-show-browser-chrome="false"] .top{display:none}
+html[data-param-show-footer="false"] .foot{display:none}
+html[data-param-show-captions="false"] .cap{display:none}
+html[data-param-show-seal="false"] #seal{display:none}
+
+/* ============================================================
+   ★ 新增：3D 展映舞台样式（只在 .trio.is-3d 时生效）
+   ============================================================ */
+.trio.is-3d{
+  display:block;
+  position:relative;
+  margin-top:19px;
+  height:480px;
+  border-radius:12px;
+  overflow:hidden;
+  isolation:isolate;
+  perspective:1100px;
+  perspective-origin:50% 48%;
+  background:linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.006));
+  border:1px solid rgba(0,0,0,.06);
+}
+.poster.is-dark .trio.is-3d{
+  background:linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.008));
+  border-color:rgba(255,255,255,.06);
+}
+.trio.is-3d.no-3d{perspective:none}
+.trio.is-3d .stage3d{
+  position:absolute;inset:0;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.trio.is-3d.no-3d .stage3d{transform-style:flat}
+
+/* 3D 卡片：完全交给 JS 算 transform，这里只管外观 */
+.trio.is-3d .card3d{
+  position:absolute;left:50%;top:50%;
+  border-radius:var(--shot-r,4px);
+  overflow:hidden;
+  background:var(--shotBg);
+  box-shadow:
+    0 14px 32px -12px rgba(0,0,0,.55),
+    0 0 0 1px rgba(0,0,0,.06);
+  will-change:transform,opacity;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  transform-origin:50% 50%;
+  cursor:pointer;
+  opacity:0;
+}
+.poster.is-dark .trio.is-3d .card3d{
+  box-shadow:
+    0 14px 32px -12px rgba(0,0,0,.85),
+    0 0 0 1px rgba(255,255,255,.08);
+}
+.trio.is-3d .card3d img{
+  display:block;width:100%;height:100%;
+  object-fit:fill;object-position:center;
+  pointer-events:none;-webkit-user-drag:none;user-select:none;
+}
+.trio.is-3d .card3d .empty{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  background:#FAFAF8;color:#C0C0BC;
+  font-size:9.9px;letter-spacing:.08em;
+}
+
+/* 图注条：浮在底部中央，毛玻璃徽章 */
+/* ============================================================
+   展签式图注：移出 3D 展台，落在纸面上（画廊展签）
+   页码用罗马数字 + 总数，配合展台底边一道进度细线
+   ============================================================ */
+.capbar3d{
+  position:relative;
+  display:flex;align-items:baseline;justify-content:center;gap:10px;
+  margin:11px 0 0;
+  padding:0;
+  width:100%;
+  background:none;border:0;box-shadow:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  color:var(--mute);
+  font-family:var(--mono);
+  white-space:nowrap;
+  pointer-events:none;
+}
+.capbar3d .cap-num{
+  font-style:italic;
+  font-family:var(--latin);
+  font-size:15px;line-height:1;
+  color:var(--accent);
+  letter-spacing:.01em;
+}
+.capbar3d .cap-num i{
+  font-style:normal;
+  font-family:var(--sans);
+  font-size:8.2px;
+  letter-spacing:.02em;
+  color:var(--mute);
+  opacity:.66;
+  margin-left:1px;
+  font-variant-numeric:tabular-nums;
+}
+.capbar3d .cap-name{
+  font-size:8.6px;
+  letter-spacing:.20em;
+  text-transform:uppercase;
+  color:var(--mute);
+}
+.capbar3d .cap-name b{
+  font-weight:400;
+  margin-left:5px;
+  color:var(--accent);
+  opacity:.72;
+  text-transform:none;
+  letter-spacing:.04em;
+  font-size:10px;
+  /* ☀/☾ 靠 U+FE0E 文本变体压成单色，这里再兜一层灰度 */
+  filter:grayscale(1);
+}
+/* 展台底边：1px 进度细线，替代页码点 */
+.trio.is-3d .cap-rule{
+  position:absolute;left:0;right:0;bottom:0;
+  height:1px;z-index:19;pointer-events:none;
+  background:rgba(0,0,0,.07);
+}
+.poster.is-dark .trio.is-3d .cap-rule{background:rgba(255,255,255,.09)}
+.trio.is-3d .cap-rule i{
+  position:absolute;left:0;top:0;bottom:0;width:0;
+  background:var(--accent);
+  opacity:.62;
+  transition:width .12s linear;
+}
+/* ============================================================
+   卡片阴影：按布局给不同的影子，不是一套影子走天下
+   ------------------------------------------------------------
+   coverflow  两侧斜影，横向拉长 —— 强调「并排一排」
+   ring 宽松  正下方柔圆影，范围小 —— 环有体积，影子不能抢
+   ring 紧凑  极窄的贴地影 —— 卡片已经贴住，影子只是压边
+   fan        下偏左的斜影 —— 扇形是绕圆心转，影子跟着偏
+   stack      每层错位的小方影 —— 叠牌要看出厚度
+   ============================================================ */
+.trio.is-3d .card3d::before{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+  z-index:-1;
+  opacity:1;
+  transition:opacity .2s ease, background .2s ease;
+  /* 默认值 = coverflow 的斜影 */
+  left:-6%;right:-6%;bottom:-11%;
+  height:18%;
+  border-radius:50%;
+  filter:blur(6px);
+  background:radial-gradient(ellipse at 50% 50%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .92)) 0%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .42)) 44%,
+    rgba(0,0,0,0) 74%);
+}
+
+/* coverflow：横向拉长的斜影，两侧更重 */
+html[data-lay3d="coverflow"] .trio.is-3d .card3d::before{
+  left:-14%;right:-14%;bottom:-10%;
+  height:15%;
+  filter:blur(7px);
+}
+
+/* ring 宽松：正下方的小圆影 */
+html[data-lay3d="ring"] .trio.is-3d .card3d::before{
+  left:16%;right:16%;bottom:-8%;
+  height:12%;
+  filter:blur(8px);
+  background:radial-gradient(ellipse at 50% 50%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .78)) 0%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .34)) 46%,
+    rgba(0,0,0,0) 76%);
+}
+
+/* ring 紧凑：极窄的贴地影，只压一条边 */
+html[data-lay3d="ringFloat"] .trio.is-3d .card3d::before{
+  left:4%;right:4%;bottom:-5%;
+  height:7%;
+  filter:blur(4px);
+  background:radial-gradient(ellipse at 50% 50%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .95)) 0%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .5)) 40%,
+    rgba(0,0,0,0) 70%);
+}
+
+/* fan：下偏左的斜影 */
+html[data-lay3d="fan"] .trio.is-3d .card3d::before{
+  left:-10%;right:2%;bottom:-10%;
+  height:16%;
+  filter:blur(6px);
+  background:radial-gradient(ellipse at 42% 50%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .88)) 0%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .4)) 44%,
+    rgba(0,0,0,0) 74%);
+}
+
+/* stack：每层错位的小方影，看得见厚度 */
+html[data-lay3d="stack"] .trio.is-3d .card3d::before{
+  left:6%;right:-4%;bottom:-7%;
+  height:11%;
+  border-radius:34%;
+  filter:blur(5px);
+  background:radial-gradient(ellipse at 46% 50%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .82)) 0%,
+    rgba(0,0,0,calc(var(--card-sh,.55) * .36)) 46%,
+    rgba(0,0,0,0) 76%);
+}
+
+.poster.is-dark .trio.is-3d .card3d::before{
+  filter:blur(6px) brightness(1.6);
+}
+
+/* 倒影：卡片下方一面垂直翻转、逐渐淡出的副本。
+   用 ::after 叠 background-image 实现，不额外增加 DOM 节点。
+   默认 content 为空 —— 开关关掉时这个伪元素根本不存在。 */
+html[data-param-card-reflect="true"] .trio.is-3d .card3d::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;
+  top:100%;
+  height:62%;
+  border-radius:var(--shot-r,4px);
+  background-image:inherit;
+  background-size:100% 100%;
+  background-repeat:no-repeat;
+  transform:scaleY(-1);
+  transform-origin:50% 0;
+  opacity:.26;
+  pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.85), rgba(0,0,0,0) 78%);
+  mask-image:linear-gradient(to bottom, rgba(0,0,0,.85), rgba(0,0,0,0) 78%);
+  z-index:-2;
+}
+
+/* ============================================================
+   页码指标：按布局几何选一种，不并存
+   ------------------------------------------------------------
+   线性布局（coverflow / fan / stack）：用展台底边的进度线。
+     它们是线性阵列，「连续位移」本身就是它的语言。
+   环形布局（ring / ringFloat）：用环形刻度。
+     环是循环的，线性进度条会误导 —— 它暗示有起点和终点。
+   ============================================================ */
+
+/* ============================================================
+   页码指标：两种，按布局密度选一种，不并存
+   ------------------------------------------------------------
+   ring（宽松）   → 展台底边的进度线。环大、卡片之间有空隙，
+                    一条连续的线更贴「缓慢推进」的节奏。
+   ringFloat（紧凑）→ 页码选择器。卡片贴成一块，需要离散的「格」，
+                    而且要能点着跳。
+   线性布局（coverflow / fan / stack）→ 页码选择器 + 进度线（原设计）
+   ============================================================ */
+
+/* 页码选择器：n 个细横条 + 一个滑动的指示块。
+   刻意不加阴影、不加毛玻璃 —— 它是纸面展签的一部分，不是浮层。 */
+.pgsel{
+  position:relative;
+  display:flex;align-items:center;gap:6px;
+  margin-left:5px;
+  padding-left:13px;
+  pointer-events:auto;
+  flex:none;
+}
+.pgsel::before{
+  content:"";position:absolute;left:0;top:50%;
+  width:1px;height:9px;margin-top:-4.5px;
+  background:currentColor;opacity:.18;
+}
+.pgsel .pg{
+  width:6px;height:2px;padding:0;border:0;
+  border-radius:1px;
+  background:currentColor;opacity:.22;
+  cursor:pointer;outline:none;
+  flex:none;
+  transition:opacity .28s ease;
+}
+.pgsel .pg:hover{opacity:.5}
+/* 滑动的指示块：单独一个元素，靠 translateX + width 过渡 */
+/* 当前页的那一条：自己变长、上强调色。
+   不做独立滑块 —— 每个点管自己，不需要算坐标，也就不会错位。 */
+.pgsel .pg.active{
+  width:13px;
+  background:var(--accent);
+  opacity:1;
+}
+
+/* 页码指标由参数决定，不再按布局硬编码 */
+html[data-ind="line"] .pgsel{ display:none; }
+html[data-ind="dots"] .cap-rule{ display:none; }
+html[data-ind="none"] .pgsel{ display:none; }
+html[data-ind="none"] .cap-rule{ display:none; }
+html[data-cap-num="off"] .cap-num{ display:none; }
+
+/* 浮光式圆点：细点 + 当前页拉成短棒，底部一条毛玻璃药丸底托 */
+.pgsel.is-float{
+  margin-left:6px;padding:5px 11px 5px 11px;gap:7px;
+  border-radius:999px;
+  /* 底色用「纸色 + 强调色 一点点」，浅底和深底都不糊 */
+  background:color-mix(in srgb, var(--paper,#fff) 72%, var(--accent) 8%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 2px 10px -6px rgba(0,0,0,.35);
+  -webkit-backdrop-filter:blur(8px) saturate(1.05);
+  backdrop-filter:blur(8px) saturate(1.05);
+}
+.pgsel.is-float::before{display:none}
+.pgsel.is-float .pg{
+  width:6px;height:6px;border-radius:50%;
+  transition:width .35s cubic-bezier(.4,0,.2,1), background .35s ease, border-radius .35s ease;
+}
+.pgsel.is-float .pg{
+  background:color-mix(in srgb, currentColor 38%, transparent);
+}
+.pgsel.is-float .pg.active{
+  width:18px;border-radius:3px;
+  background:var(--accent);opacity:1;
+}
+
+html[data-param-show-captions="false"] .capbar3d{display:none}
+html[data-param-show-captions="false"] .trio.is-3d .cap-rule{display:none}
+
+/* ============================================================
+   水印层：挂在 .page 内，压在装饰层之上、封签之下
+   ============================================================ */
+.wm{
+  position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;
+  background-image:var(--wm-image,none);
+  background-size:var(--wm-size,190px 62px);
+  background-repeat:repeat;
+}
+
+/* ============================================================
+   截图质感：一层 filter + 一层纹理叠加，全 CSS，无 canvas
+   每个风格只有「一个强度」在外面，内部各自映射到模糊/密度/叠加
+   ============================================================ */
+.shot, .card3d{position:relative}
+.shot::after, .card3d::after{
+  content:"";position:absolute;inset:0;z-index:6;
+  pointer-events:none;border-radius:inherit;
+  opacity:0;transition:opacity .2s ease;
+}
+.shot img, .card3d img{transition:filter .2s ease}
+
+/* 霜雾：只柔化，保住色调与构图 */
+html[data-param-mask-style="frost"] .shot img,
+html[data-param-mask-style="frost"] .card3d img{
+  filter:blur(var(--mask-blur,2px)) saturate(.94);
+}
+
+/* 网点印刷：能看出构图，认不出字 */
+html[data-param-mask-style="halftone"] .shot img,
+html[data-param-mask-style="halftone"] .card3d img{
+  filter:blur(var(--mask-blur,0.4px)) contrast(1.05);
+}
+html[data-param-mask-style="halftone"] .shot::after,
+html[data-param-mask-style="halftone"] .card3d::after{
+  opacity:var(--mask-op,.45);
+  background-image:radial-gradient(circle at 50% 50%, rgba(18,20,24,.62) 0 .9px, transparent 1.15px);
+  background-size:var(--mask-cell,3px) var(--mask-cell,3px);
+  mix-blend-mode:multiply;
+}
+
+/* 银雕横纹：细横线压住文字，像旧印刷品的刻线 */
+html[data-param-mask-style="engrave"] .shot img,
+html[data-param-mask-style="engrave"] .card3d img{
+  filter:blur(var(--mask-blur,0.6px)) grayscale(.3);
+}
+html[data-param-mask-style="engrave"] .shot::after,
+html[data-param-mask-style="engrave"] .card3d::after{
+  opacity:var(--mask-op,.42);
+  background-image:repeating-linear-gradient(0deg, rgba(22,24,28,.52) 0 .65px, transparent .65px var(--mask-gap,2.6px));
+  mix-blend-mode:multiply;
+}
+
+/* 亚麻织纹：两个方向的细线交叉，像书页的布纹纸 */
+html[data-param-mask-style="linen"] .shot img,
+html[data-param-mask-style="linen"] .card3d img{
+  filter:blur(var(--mask-blur,0.5px)) contrast(1.02);
+}
+html[data-param-mask-style="linen"] .shot::after,
+html[data-param-mask-style="linen"] .card3d::after{
+  opacity:var(--mask-op,.40);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(24,26,30,.30) 0 .5px, transparent .5px var(--mask-gap,3px)),
+    repeating-linear-gradient(0deg,  rgba(24,26,30,.30) 0 .5px, transparent .5px var(--mask-gap,3px));
+  mix-blend-mode:multiply;
+}
+
+/* 胶片颗粒：噪点，靠 SVG feTurbulence 生成，比多层径向渐变更像真的 */
+html[data-param-mask-style="grain"] .shot img,
+html[data-param-mask-style="grain"] .card3d img{
+  filter:blur(var(--mask-blur,0.3px)) contrast(1.04) saturate(.96);
+}
+html[data-param-mask-style="grain"] .shot::after,
+html[data-param-mask-style="grain"] .card3d::after{
+  opacity:var(--mask-op,.34);
+  background-image:var(--mask-noise,none);
+  background-size:var(--mask-cell,140px) var(--mask-cell,140px);
+  mix-blend-mode:overlay;
+}
+
+/* 点刻版画：疏密点阵，像铜版画的底纹 */
+html[data-param-mask-style="stipple"] .shot img,
+html[data-param-mask-style="stipple"] .card3d img{
+  filter:blur(var(--mask-blur,0.5px)) grayscale(.55) contrast(1.06);
+}
+html[data-param-mask-style="stipple"] .shot::after,
+html[data-param-mask-style="stipple"] .card3d::after{
+  opacity:var(--mask-op,.40);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(20,22,26,.55) 0 .8px, transparent 1px),
+    radial-gradient(circle at 70% 65%, rgba(20,22,26,.48) 0 .7px, transparent .95px),
+    radial-gradient(circle at 45% 85%, rgba(20,22,26,.42) 0 .6px, transparent .85px);
+  background-size:var(--mask-cell,5px) var(--mask-cell,5px);
+  mix-blend-mode:multiply;
+}
+
+/* 交叉排线：45° 双向细线，素描/蚀刻的排线感 */
+html[data-param-mask-style="crosshatch"] .shot img,
+html[data-param-mask-style="crosshatch"] .card3d img{
+  filter:blur(var(--mask-blur,0.4px)) grayscale(.4) contrast(1.05);
+}
+html[data-param-mask-style="crosshatch"] .shot::after,
+html[data-param-mask-style="crosshatch"] .card3d::after{
+  opacity:var(--mask-op,.38);
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(22,24,28,.44) 0 .6px, transparent .6px var(--mask-gap,3.4px)),
+    repeating-linear-gradient(-45deg, rgba(22,24,28,.44) 0 .6px, transparent .6px var(--mask-gap,3.4px));
+  mix-blend-mode:multiply;
+}
+
+/* 3D 模式下的整页过渡 */
+.trio{transition:height .35s ease}
+
+/* ============================================================
+   展台（lede）：卡片坐在一条台面上
+   两档：平面 = 薄板 + 下方柔影；立体 = 更厚、上沿暗面、中间一道高光、几乎不落影
+   ============================================================ */
+.trio.is-3d{overflow:visible}
+.ledge{position:absolute;left:8px;right:8px;pointer-events:none;z-index:1}
+.ledge::before,.ledge::after{content:"";position:absolute;left:0;right:0}
+/* 主板：上浅下深的渐变 */
+.ledge .plate{position:absolute;left:0;right:0;border-radius:2px}
+.ledge .lip{position:absolute;left:0;right:0;border-radius:1px}
+
+/* 平面：薄板，底下一层柔光 */
+.ledge[data-kind="shelf"] .plate{
+  height:10px;
+  background:linear-gradient(color-mix(in srgb,var(--led-mid,#5a5a5a) 82%,#fff 18%),var(--led-bot,#2e2e2e));
+  border-radius:2px;
+}
+.ledge[data-kind="shelf"] .glow{
+  position:absolute;left:-2px;right:-2px;top:10px;height:26px;
+  background:linear-gradient(rgba(0,0,0,.22),rgba(0,0,0,0));
+}
+
+/* 立体：上沿暗面 + 主条 + 中间高光 + 圆角收口，几乎不落影 */
+.ledge[data-kind="shelf3d"] .plate{
+  height:16px;
+  background:linear-gradient(var(--led-mid,#4a4a4a) 0%,var(--led-bot,#1e1e1e) 74%,var(--led-bot,#151515) 100%);
+  border-radius:3px;
+  box-shadow:0 -1px 0 color-mix(in srgb,var(--led-hi,#fff) 26%,transparent) inset, 0 1px 0 rgba(0,0,0,.5);
+}
+.ledge[data-kind="shelf3d"] .lip{
+  top:9px;height:1.5px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--led-hi,#fff) 42%,transparent) 6%,color-mix(in srgb,var(--led-hi,#fff) 42%,transparent) 94%,transparent);
+}
+.ledge[data-kind="shelf3d"] .glow{
+  position:absolute;left:-1px;right:-1px;top:16px;height:7px;
+  background:linear-gradient(rgba(0,0,0,.20),rgba(0,0,0,0));
+}
+
+</style>
+</head>
+<body>
+<main class="poster" data-reeden-capture="" id="poster">
+  <div class="win">
+    <div class="top">
+      <span class="lights"><i></i><i></i><i></i></span>
+      <span class="nav">
+        <b><svg viewBox="0 0 10 10"><path d="M6.4 1.6 3 5l3.4 3.4"></path></svg></b>
+        <b><svg viewBox="0 0 10 10"><path d="M3.6 1.6 7 5l-3.4 3.4"></path></svg></b>
+      </span>
+      <span class="spacer"></span>
+      <span class="urlbox">
+        <span class="mode" id="mode" aria-hidden="true"></span>
+        <span class="host" id="url"></span>
+      </span>
+      <span class="acts">
+        <svg viewBox="0 0 14 14"><path d="M7 1.6v8"></path><path d="M4 4.4 7 1.6l3 2.8"></path><path d="M2.4 9.2v2.2h9.2V9.2"></path></svg>
+        <svg viewBox="0 0 14 14"><rect x="5" y="4.4" width="7" height="7" rx="1.4"></rect><path d="M9 4.4V2.8H2v6.2h2"></path></svg>
+      </span>
+    </div>
+
+    <div class="page">
+      <div id="deskBg" aria-hidden="true"></div>
+      <div id="deskTint" aria-hidden="true"></div>
+      <div class="deco" id="deco" aria-hidden="true"></div>
+      <div class="wm" id="wm" aria-hidden="true"></div>
+      <div class="hd"><h1 class="name" id="name">主题</h1></div>
+      <p class="intro" id="intro"></p>
+      <div class="trio" id="trio"></div>
+      <div class="foot" id="foot">
+        <span class="c">©</span>
+        <span class="a" id="footAuthor"></span>
+      </div>
+    </div>
+
+    <aside class="seal" id="seal">
+      <span class="who" id="sealWho"></span>
+      <span class="note">閲覧用</span>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   3D 舞台全局状态
+   ============================================================ */
+var LG_TOP_OFFSET = 14;
+var ST = {
+  active: false,          // 当前是否启用 3D
+  n: 0,                   // 有效卡片数（跳过空槽）
+  cards: [],              // { el, data, cap, vi }
+  dots: [],
+  capNumEl: null,
+  capNameEl: null,
+  capRuleEl: null,
+  stage: null,
+  activeVi: 0,
+  p: 0,                   // 归一化进度 0-1
+  playing: false,
+  raf: 0,
+  lastTs: 0,
+  lastSeek: 0,
+  drag: null,
+  params: null,
+  cardW: 0,
+  cardH: 0,
+  has3D: true,
+  bound: false
+};
+
+function detect3D(){
+  try{
+    return !!(window.CSS && CSS.supports &&
+              CSS.supports('transform-style','preserve-3d') &&
+              CSS.supports('perspective','100px'));
+  }catch(e){ return false; }
+}
+function clampN(v,a,b){ return v<a?a:(v>b?b:v); }
+function wrapD(x,n){
+  if(n<=1) return 0;
+  var r = x % n;
+  if(r<0) r+=n;
+  if(r>n/2) r-=n;
+  return r;
+}
+function fadeR(v,a,b){
+  if(v<=a) return 1;
+  if(v>=b) return 0;
+  return 1-(v-a)/(b-a);
+}
+function toBoolP(v,d){
+  if(v===true||v===false) return v;
+  if(v==null) return d;
+  var s=String(v).trim().toLowerCase();
+  return s==='true'||s==='1'||s==='on'||s==='yes';
+}
+function toNumP(v,d){
+  var n=parseFloat(v);return isFinite(n)?n:d;
+}
+
+/* ============================================================
+   下面这一段：从「配色工具」到「applyDarkChrome」，完全沿用原代码
+   ============================================================ */
+function hx(v,d){v=String(v==null?'':v).trim();return /^#?[0-9a-fA-F]{6}$/.test(v)?'#'+v.replace('#','').toUpperCase():d;}
+function rgb(h){h=String(h).replace('#','');var n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
+function lum(h){var c=rgb(h).map(function(v){v=v/255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);});return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];}
+function mix(a,b,t){var x=rgb(a),y=rgb(b);return '#'+[0,1,2].map(function(i){return Math.round(x[i]+(y[i]-x[i])*t).toString(16).padStart(2,'0');}).join('').toUpperCase();}
+function toHsl(h){var c=rgb(h).map(function(v){return v/255;});var mx=Math.max.apply(null,c),mn=Math.min.apply(null,c);var l=(mx+mn)/2,s=0,hue=0;if(mx!==mn){var d=mx-mn;s=l>0.5?d/(2-mx-mn):d/(mx+mn);if(mx===c[0])hue=((c[1]-c[2])/d+(c[1]<c[2]?6:0));else if(mx===c[1])hue=(c[2]-c[0])/d+2;else hue=(c[0]-c[1])/d+4;hue/=6;}return [hue,s,l];}
+function fromHsl(hue,s,l){function f(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}var r,g,b;if(s===0){r=g=b=l;}else{var q=l<0.5?l*(1+s):l+s-l*s;var p=2*l-q;r=f(p,q,hue+1/3);g=f(p,q,hue);b=f(p,q,hue-1/3);}return '#'+[r,g,b].map(function(v){return Math.max(0,Math.min(255,Math.round(v*255))).toString(16).padStart(2,'0');}).join('').toUpperCase();}
+function fade(h,a){var c=rgb(h);return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';}
+function contrast(a,b){var L1=lum(a)+0.05,L2=lum(b)+0.05;return L1>L2?L1/L2:L2/L1;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function solidOf(v){var m=String(v).match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)/);if(!m)return '';var c=m[0];if(/^#?[0-9a-fA-F]{6}$/.test(c))return hx(c,'');if(/^#[0-9a-fA-F]{3}$/.test(c))return hx(c.replace('#','').split('').map(function(x){return x+x;}).join(''),'');return '';}
+function sealStyle(P,paper){
+  var alpha=0.16;
+  var glass=mix(P.accent,paper,1-alpha);
+  var deep=P.accent;
+  var up=lum(glass)<0.5;
+  for(var i=0;i<28&&contrast(deep,glass)<3.6;i++){
+    var x=toHsl(deep);
+    var s2=Math.min(1,Math.max(x[1],.35)*1.05);
+    var l2=up?Math.min(.92,x[2]+.05):Math.max(.16,x[2]-.04);
+    deep=fromHsl(x[0],s2,l2);
+  }
+  var note=P.muted;
+  if(contrast(note,glass)<3){note=lum(glass)>0.5?mix(P.muted,'#000000',.45):mix(P.muted,'#FFFFFF',.55);}
+  return {bg:fade(P.accent,alpha),who:deep,note:note};
+}
+var CFG={fontFamily:''};
+
+function read(payload){
+  payload=payload||{};
+  var th=payload.theme||{},C=th.colors||{};
+  var pr=payload.profile||{};
+  var background=hx(C.background,'#F4EDE5');
+  var ink=hx(C.foreground,'#342E2A');
+  if(Math.abs(lum(ink)-lum(background))<0.25) ink=lum(background)>0.45?'#2A2724':'#EDE8E0';
+  var overrideAcc=String((payload.params&&payload.params.overrideAccent)||'').trim();
+  var accentRaw=overrideAcc?hx(overrideAcc,''):hx(C.primary,'');
+  var accent=accentRaw||'';
+  if(accent){
+    // 保留色相，只调明度直到对比度 >= 3；避免把主题色整个吞成墨色
+    for(var ai=0;ai<26&&contrast(accent,background)<3;ai++){
+      var ah=toHsl(accent);
+      accent=fromHsl(ah[0],ah[1],lum(background)>0.5?Math.max(.14,ah[2]-.022):Math.min(.88,ah[2]+.022));
+    }
+    if(contrast(accent,background)<3) accent=ink;
+  } else {
+    accent=ink;
+  }
+  var muted=hx(C.mutedForeground,'')||mix(ink,background,.45);
+  var shots=[];
+  (Array.isArray(payload.screens)?payload.screens:[]).forEach(function(s){
+    if(!s||!String(s.image||'').trim()) return;
+    var w=+s.width,h=+s.height;
+    shots.push({
+      src:String(s.image),
+      page:String(s.page||''),
+      label:String(s.label||''),
+      detail:String(s.detail||''),
+      darkMode:(typeof s.darkMode==='boolean')?s.darkMode:null,
+      a:(w>0&&h>0)?w/h:0.4739
+    });
+  });
+  var ap=payload.appearance||{};
+  /* 本地自定义字体：把 data URL 注入为 @font-face，导出时 exporter 会收集所有 style，
+     因此自定义字体在预览与 PNG/视频导出中都生效。 */
+  try{
+    var PRF=(payload.params||{});
+    var customFont=String(PRF.titleFont||'').trim();
+    var fontStyle=document.getElementById('liubai-custom-font');
+    if(customFont && customFont.indexOf('data:')===0){
+      if(!fontStyle){ fontStyle=document.createElement('style'); fontStyle.id='liubai-custom-font'; document.head.appendChild(fontStyle); }
+      var face="@font-face{font-family:'LiubaiCustomFont';src:url('"+customFont+"');font-display:swap;}";
+      if(fontStyle.textContent!==face) fontStyle.textContent=face;
+    } else if(fontStyle){ fontStyle.remove(); }
+  }catch(e){}
+  var font=(String((payload.params||{}).titleFont||'').trim()?'LiubaiCustomFont':'')||String(CFG.fontFamily||'').trim()||String(ap.fontFamily||'').trim()||String(th.fontFamily||'').trim();
+  return {
+    font:font,
+    name:String(th.name||'').trim(),
+    desc:String(th.description||'').trim(),
+    author:String(th.author||'').trim(),
+    sharer:String(pr.nickname||pr.name||pr.displayName||'').trim()||String(payload.user||'').trim().replace(/^@/,''),
+    background:background,ink:ink,accent:accent,muted:muted,
+    darkMode:(typeof th.darkMode==='boolean')?th.darkMode:null,
+    shots:shots
+  };
+}
+
+var EN={home:'HOME',bookshelf:'SHELF',bookshelfCategory:'COLLECTION',reader:'READER',statistics:'STATISTICS',profile:'PROFILE',splash:'SPLASH',photo:'PHOTO'};
+var ZH={home:'首页',bookshelf:'书架',bookshelfCategory:'分类',reader:'阅读页',statistics:'统计',profile:'我的',splash:'启动图',photo:'截图'};
+function hasCJK(s){
+  s=String(s==null?'':s);
+  for(var i=0;i<s.length;i++){
+    var c=s.charCodeAt(i);
+    if(c>=0x4E00&&c<=0x9FFF)return true;
+    if(c>=0x3400&&c<=0x4DBF)return true;
+    if(c>=0xF900&&c<=0xFAFF)return true;
+    if(c>=0x3040&&c<=0x30FF)return true;
+    if(c>=0xAC00&&c<=0xD7AF)return true;
+  }
+  return false;
+}
+
+function hueOf(c){var r=c.r/255,g=c.g/255,b=c.b/255;var mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;if(d===0)return 0;var h;if(mx===r)h=((g-b)/d+(g<b?6:0));else if(mx===g)h=((b-r)/d+2);else h=((r-g)/d+4);return h*60;}
+function extractPalette(shots,cb){
+  if(!shots||!shots.length){cb(null);return;}
+  var colors=[];var done=false;
+  function finish(){if(done)return;done=true;cb(colors.length?colors:null);}
+  setTimeout(finish,900);
+  var todo=shots.slice(0,2).filter(function(it){return it&&it.src;});
+  if(!todo.length){finish();return;}
+  var pending=todo.length;
+  todo.forEach(function(it){
+    var src=it.src;var img=new Image();
+    img.onload=function(){
+      try{
+        var c=document.createElement('canvas');c.width=24;c.height=24;
+        var ctx=c.getContext('2d',{willReadFrequently:true});
+        ctx.drawImage(img,0,0,24,24);
+        var d=ctx.getImageData(0,0,24,24).data;
+        var bins={};
+        for(var i=0;i<d.length;i+=4){
+          if(d[i+3]<128)continue;
+          var r=d[i],g=d[i+1],b=d[i+2];
+          var mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+          var L=(0.2126*r+0.7152*g+0.0722*b)/255;
+          var sat=mx===0?0:(mx-mn)/mx;
+          if(L<0.10||L>0.94||sat<0.18)continue;
+          var key=(r>>5)+'_'+(g>>5)+'_'+(b>>5);
+          var v=bins[key]||(bins[key]={n:0,r:0,g:0,b:0,sat:0});
+          v.n++;v.r+=r;v.g+=g;v.b+=b;v.sat+=sat;
+        }
+        var arr=Object.keys(bins).map(function(k){
+          var v=bins[k];
+          return {n:v.n,r:v.r/v.n,g:v.g/v.n,b:v.b/v.n,sat:v.sat/v.n,score:v.n*(0.35+(v.sat/v.n)*1.6)};
+        }).sort(function(a,b){return b.score-a.score;});
+        arr.forEach(function(c){
+          if(colors.length>=3)return;
+          var h=hueOf(c);
+          var dup=colors.some(function(o){
+            var oh=hueOf(o);var dh=Math.abs(oh-h);
+            if(dh>180)dh=360-dh;
+            return dh<26;
+          });
+          if(!dup)colors.push(c);
+        });
+      }catch(e){}
+      if(--pending===0)finish();
+    };
+    img.onerror=function(){if(--pending===0)finish();};
+    img.src=src;
+  });
+}
+function auroraBg(colors,paper,dark){
+  function rgba(o,a){return 'rgba('+Math.round(o.r)+','+Math.round(o.g)+','+Math.round(o.b)+','+a+')';}
+  function lift(o){
+    if(dark)return o;
+    var L=(0.2126*o.r+0.7152*o.g+0.0722*o.b)/255;
+    if(L>=0.62)return o;
+    var t=(0.62-L)/(1-L);var p=rgb(paper);
+    return {r:o.r+(p[0]-o.r)*t,g:o.g+(p[1]-o.g)*t,b:o.b+(p[2]-o.b)*t};
+  }
+  var c=colors.map(lift);
+  var a=c[0];var b2=c[1]||c[0];var c3=c[2]||c[1]||c[0];
+  if(!a)return 'none';
+  var A1=dark?0.40:0.85,A2=dark?0.30:0.62,A3=dark?0.24:0.50;
+  return 'radial-gradient(120% 92% at 8% 0%, '+rgba(a,A1)+' 0%, '+rgba(a,0)+' 58%),'+
+         'radial-gradient(110% 86% at 95% 18%, '+rgba(b2,A2)+' 0%, '+rgba(b2,0)+' 54%),'+
+         'radial-gradient(130% 100% at 62% 105%, '+rgba(c3,A3)+' 0%, '+rgba(c3,0)+' 58%)';
+}
+function paperOf(P){
+  var bgL=lum(P.background);
+  if(bgL<0.13){var b=toHsl(P.background);return fromHsl(b[0],Math.min(b[1],0.30),0.135);}
+  if(bgL>0.35)return '#FFFFFF';
+  return lum(P.ink)>0.5?mix(P.ink,'#000000',.86):'#FFFFFF';
+}
+function keepReadable(bg,ink){
+  var base=solidOf(bg);if(!base)return bg;
+  var out=base;
+  for(var i=0;i<20&&contrast(out,ink)<3.2;i++){
+    var h=toHsl(out);
+    out=fromHsl(h[0],h[1],lum(ink)>0.5?Math.max(.04,h[2]-.04):Math.min(.97,h[2]+.04));
+  }
+  if(out===base)return bg;
+  return /gradient\(/.test(bg)?bg.replace(base,out):out;
+}
+function pickBg(payload){
+  var th=payload.theme||{},ap=payload.appearance||{};
+  var cands=[payload.backgroundImage,payload.background,ap.backgroundImage,ap.background,th.backgroundImage,th.background];
+  for(var i=0;i<cands.length;i++){var v=cands[i];if(typeof v==='string'&&v.trim())return v.trim();}
+  return '';
+}
+function isColor(v){return /^(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\(|color\(|(linear|radial|conic)-gradient\()/.test(v);}
+var __deskToken=0;
+function applyDesk(payload,ink){
+  var poster=document.getElementById('poster');
+  var bg=document.getElementById('deskBg');
+  var tint=document.getElementById('deskTint');
+  if(!poster||!bg)return;
+  var v=pickBg(payload||{});
+  var token=++__deskToken;
+  function clear(){
+    if(token!==__deskToken)return;
+    poster.classList.remove('has-bg');poster.classList.remove('is-plain');
+    bg.style.backgroundImage='none';bg.style.backgroundColor='transparent';
+  }
+  if(!v){clear();return;}
+  if(isColor(v)){
+    var safe=keepReadable(v,ink||'#333333');
+    bg.style.backgroundImage=/gradient\(/.test(safe)?safe:'none';
+    bg.style.backgroundColor=/gradient\(/.test(safe)?'transparent':safe;
+    poster.classList.add('has-bg');poster.classList.add('is-plain');
+    return;
+  }
+  poster.classList.remove('is-plain');
+  bg.style.backgroundColor='transparent';
+  var img=new Image();
+  img.onload=function(){
+    if(token!==__deskToken)return;
+    bg.style.backgroundImage='url("'+v.replace(/["\\\n\r]/g,'\\$&')+'")';
+    poster.classList.add('has-bg');
+  };
+  img.onerror=function(){clear();};
+  img.src=v;
+}
+function applyDarkChrome(poster,P){
+  var b=toHsl(P.background);var a=toHsl(P.accent);
+  var hue=(b[1]>0.06)?b[0]:a[0];
+  var sat=(b[1]>0.06)?Math.min(b[1],0.34):Math.min(a[1]*0.5,0.18);
+  function d(l,sMul){return fromHsl(hue,sat*(sMul||1),l);}
+  poster.style.setProperty('--chrome',d(0.105));
+  poster.style.setProperty('--topbar',d(0.165));
+  poster.style.setProperty('--chromeLine',d(0.225));
+  poster.style.setProperty('--chromeBtn',d(0.195));
+  poster.style.setProperty('--shotBg',d(0.09));
+  poster.style.setProperty('--darkPaper',d(0.135));
+  var noteH=toHsl(P.muted);
+  poster.style.setProperty('--chromeMute',fromHsl(noteH[0],Math.min(noteH[1],0.22),0.62));
+  poster.style.setProperty('--chromeInk',fromHsl(noteH[0],Math.min(noteH[1],0.12),0.88));
+}
+function clearDarkChrome(poster){
+  if(!poster)return;
+  var keys=['--chrome','--topbar','--chromeLine','--chromeBtn','--chromeMute','--chromeInk','--shotBg','--darkPaper'];
+  for(var i=0;i<keys.length;i++) poster.style.removeProperty(keys[i]);
+}
+
+/* 装饰纹样（原样） */
+function decoOf(P,paper,accent,aspect){
+  aspect=aspect||1.4;
+  var seed=20261112;
+  function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296;}
+  var n=0,nm=String(P.name||'');
+  for(var i=0;i<nm.length;i++)n+=nm.charCodeAt(i);
+  var shapes=['sparkle','dotstar','outline','blur','note','confetti'];
+  /* auto = 随机：按主题名哈希取种子，同一主题每次渲染都是同一种（不会闪），
+     但不同主题会得到不同样式 —— 既有随机感，又不漂移 */
+  var pick=String((CFG.deco||'auto'));
+  var shape=(shapes.indexOf(pick)>=0) ? pick : shapes[n%shapes.length];
+  var dark=lum(paper)<0.42;
+  var soft=mix(accent,paper,dark?0.46:0.62);
+  var faint=mix(accent,paper,dark?0.26:0.82);
+  var deep=mix(accent,paper,dark?0.58:0.42);
+  var g=[];
+  function starPath(cx,cy,r,inner){var pts=[];for(var k=0;k<10;k++){var ang=-Math.PI/2+k*Math.PI/5;var rad=(k%2===0)?r:r*(inner||0.44);pts.push((cx+Math.cos(ang)*rad).toFixed(2)+' '+(cy+Math.sin(ang)*rad).toFixed(2));}return 'M'+pts.join('L')+'Z';}
+  if(shape==='sparkle'){
+    for(var k1=0;k1<3;k1++){var x1=14+rnd()*58,y1=16+rnd()*56,z1=3.4+rnd()*4.2;
+      g.push('<g transform="translate('+x1.toFixed(1)+' '+y1.toFixed(1)+')" opacity="'+(k1===0?0.9:0.45).toFixed(2)+'"><path d="M0 '+(-z1).toFixed(1)+'Q.6 0 '+z1.toFixed(1)+' 0Q.6 0 0 '+z1.toFixed(1)+'Q-.6 0 '+(-z1).toFixed(1)+' 0Q-.6 0 0 '+(-z1).toFixed(1)+'Z" fill="'+soft+'"/></g>');}
+  }else if(shape==='dotstar'){
+    var idc='cl'+(n%997);
+    g.push('<defs><clipPath id="'+idc+'"><path d="'+starPath(50,44,30,0.44)+'"/></clipPath></defs>');
+    g.push('<g clip-path="url(#'+idc+')">');
+    for(var yy=10;yy<80;yy+=5.4){for(var xx=14;xx<90;xx+=5.4){var off=(Math.round(yy/5.4)%2)*2.7;var fade2=1-Math.max(0,(yy-30)/55);if(fade2<=0.02)continue;g.push('<circle cx="'+(xx+off).toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="'+(1.4*fade2+0.5).toFixed(2)+'" fill="'+soft+'" opacity="'+fade2.toFixed(2)+'"/>');}}
+    g.push('</g>');
+  }else if(shape==='outline'){
+    for(var k2=0;k2<4;k2++){var ox=16+rnd()*52,oy=18+rnd()*50,orr=5+rnd()*8;g.push('<path d="'+starPath(ox,oy,orr,0.45)+'" fill="none" stroke="'+(k2===0?soft:faint)+'" stroke-width="'+(k2===0?1.1:0.8)+'" stroke-linejoin="round" opacity="'+(k2===0?0.9:0.55).toFixed(2)+'"/>');}
+  }else if(shape==='blur'){
+    var idb='bl'+(n%991);
+    g.push('<defs><filter id="'+idb+'" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter></defs>');
+    g.push('<path d="'+starPath(46,44,26,0.46)+'" fill="'+soft+'" filter="url(#'+idb+')" opacity=".85"/>');
+    g.push('<path d="'+starPath(74,66,9,0.46)+'" fill="'+soft+'" filter="url(#'+idb+')" opacity=".55"/>');
+  }else if(shape==='note'){
+    g.push('<g opacity=".9"><ellipse cx="30" cy="58" rx="8.4" ry="6.2" fill="'+soft+'" transform="rotate(-20 30 58)"/><rect x="36.8" y="21" width="2.8" height="37" rx="1.4" fill="'+soft+'"/><path d="M39.6 22 q8 3 7 12" fill="none" stroke="'+soft+'" stroke-width="2.6" stroke-linecap="round"/></g>');
+    g.push('<g opacity=".45" transform="translate(58 26) scale(.55)"><ellipse cx="10" cy="30" rx="7" ry="5.4" fill="'+faint+'"/><rect x="15.6" y="6" width="2.6" height="25" rx="1.3" fill="'+faint+'"/></g>');
+  }else{
+    var cnt=6+(n%5);
+    for(var k3=0;k3<cnt;k3++){var fx=12+rnd()*60,fy=14+rnd()*58;var fr=2.4+rnd()*(k3<2?5.5:3.5);g.push('<path d="'+starPath(fx,fy,fr,0.46)+'" fill="'+(k3%3===0?deep:k3%3===1?soft:faint)+'" opacity="'+(0.5+rnd()*0.4).toFixed(2)+'"/>');}
+  }
+  var vbW=360,vbH=Math.max(60,Math.round(vbW/aspect));
+  var unit=76;
+  var cols=Math.max(2,Math.round(vbW/unit));
+  var rows=Math.max(2,Math.round(vbH/unit));
+  var cw=vbW/cols,ch=vbH/rows;var out=[];
+  for(var gy=0;gy<rows;gy++){for(var gx=0;gx<cols;gx++){var base=Math.min(cw,ch);var sc=(base/100)*(0.58+rnd()*0.3);var ox2=(rnd()-0.5)*cw*0.3,oy2=(rnd()-0.5)*ch*0.3;var cx2=gx*cw+cw/2+ox2,cy2=gy*ch+ch/2+oy2;out.push('<g transform="translate('+(cx2-50*sc).toFixed(2)+' '+(cy2-50*sc).toFixed(2)+') scale('+sc.toFixed(4)+')" opacity="'+(0.35+rnd()*0.4).toFixed(2)+'">'+g.join('')+'</g>');}}
+  return '<svg viewBox="0 0 '+vbW+' '+vbH+'" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">'+out.join('')+'</svg>';
+}
+
+/* ============================================================
+   ★ 新增：3D 舞台
+   ============================================================ */
+function build3DStage(trio,P,PR,capData,anyCJK){
+  ST.active = true;
+  ST.has3D = detect3D();
+  ST.params = PR;
+  ST.bound = false;
+  ST.lastSeek = 0;
+
+  // 清空
+  trio.innerHTML = '';
+  trio.classList.add('is-3d');
+  trio.classList.toggle('no-3d', !ST.has3D);
+  // 清掉 grid 专用属性，避免遗留
+  trio.style.gridTemplateColumns = 'none';
+  trio.style.columnGap = '0';
+
+  // 收集有效截图
+  var valid = [];
+  P.shots.forEach(function(it,i){
+    if(!it || it.empty) return;
+    valid.push({ vi:i, data:it, cap:capData[i]||{} });
+  });
+  ST.n = valid.length;
+
+  if(!ST.n){
+    var emptyEl = document.createElement('div');
+    emptyEl.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:12px;letter-spacing:.06em;';
+    emptyEl.textContent = '尚未选择主题截图';
+    trio.appendChild(emptyEl);
+    ST.cards = []; ST.dots = [];
+    return;
+  }
+
+  // 卡片尺寸：从 stage 高 480 推
+  /* 卡片尺寸：先按「画面比例」定卡面长宽比，再让最高的那种布局塞得下。
+     ring 站得最高（cardK 0.56），所以舞台高度按它反推，五种布局同一个舞台高，
+     切换布局时不会跳高。 */
+  var asp = valid[0].data.a || 0.4739;
+  var E0 = eff3D(PR);
+  var maxK = 0.87;
+  for(var mk in LAYOUT3D_DEFAULTS){ if(LAYOUT3D_DEFAULTS[mk].cardK > maxK) maxK = LAYOUT3D_DEFAULTS[mk].cardK; }
+  var stageW0 = (trio.clientWidth > 40) ? trio.clientWidth : 556;
+  var stageH = Math.round(clampN(stageW0 / 556, 0.86, 1.08) * (520 / maxK) * 0.62);
+  stageH = clampN(stageH, 380, 640);
+  /* 卡片：截图一律等比完整显示（不裁切、不拉伸）。
+     高度先按模式占比定，宽度 = 高 × 截图比例，再由舞台宽封顶；
+     封顶时只缩高度、不改比例，所以画面始终完整。 */
+  var cardH = Math.round(stageH * (E0.cardK || 0.87));
+  if(cardH > stageH - 34) cardH = stageH - 34;
+  var cardW = Math.round(cardH * asp);
+  var isRing = (E0.mode === 'ring' || E0.mode === 'ringTight');
+  var WK = isRing ? 0.30 : (E0.mode === 'helix' ? 0.32 : E0.mode === 'carousel' ? 0.34 : E0.mode === 'arc' ? 0.36 : 0.42);
+  var maxW = Math.round(stageW0 * WK);
+  if(cardW > maxW){ cardW = maxW; cardH = Math.round(cardW / asp); }
+  ST.cardW = cardW; ST.cardH = cardH;
+  trio.style.height = stageH + 'px';
+
+  // 透视距离随布局走：ring 要更深，否则背后那圈卡片会挤成一团
+  trio.style.perspective = (E0.persp || 1100) + 'px';
+
+  // 舞台
+  /* 展台：放在舞台底部，卡片底边贴着它 */
+  /* 展台默认跟随布局：侧翼、叠层、拱形这类有「落地」需求的配展台，
+     环形、螺旋、隧道是悬空的，不配展台 */
+  var ledgeReq = String(PR.ledge || 'mode');
+  var LEDGE = (ledgeReq === 'mode') ? (E0.ledgeDef || 'none') : ledgeReq;
+  ST.ledgeOn = (LEDGE !== 'none');
+  ST.ledgeH = 0;
+  ST.ledgeTop = 0;
+  if(LEDGE !== 'none'){
+    var lg = document.createElement('div');
+    lg.className = 'ledge';
+    lg.setAttribute('data-kind', LEDGE);
+    lg.innerHTML = '<i class="plate"></i><i class="lip"></i><i class="glow"></i>';
+    /* 展台色：取主题强调色，往墨色压 62%、再往纸色提一点 —— 一定是深色，
+       但带着主题的色相，跟卡片、页签是一家人，而不是一根中性的灰条 */
+    var accHx = hx(P.accent, '#8a6a4f');
+    var paperHx = hx(P.bg || P.background || '#f3f1e8', '#f3f1e8');
+    if(!paperHx) paperHx = '#f3f1e8';
+    /* 展台色：贴近速度线的浓度 —— 强调色往纸色里掺，只比那条 1px 进度线深一点 */
+    var ledManual = String(PR.ledgeColor || '').trim();
+    var ledA, ledB, ledHi;
+    if(ledManual){
+      ledA = ledManual;
+      ledB = mix(ledA, '#141210', 0.22);
+      ledHi = mix(ledA, '#ffffff', 0.55);
+    } else {
+      var isDk = lum(paperHx) < 0.45;
+      ledA = mix(accHx, paperHx, isDk ? 0.62 : 0.38);
+      ledB = mix(ledA, '#141210', isDk ? 0.18 : 0.26);
+      ledHi = mix(ledA, '#ffffff', isDk ? 0.42 : 0.62);
+    }
+    lg.style.setProperty('--led-top', ledB);
+    lg.style.setProperty('--led-mid', ledA);
+    lg.style.setProperty('--led-bot', ledB);
+    lg.style.setProperty('--led-hi', ledHi);
+    trio.appendChild(lg);
+    ST.ledgeEl = lg;
+    ST.ledgeH = (LEDGE === 'shelf3d') ? 16 : 10;
+    ST.ledgeOn = true;
+  }
+
+  var stage = document.createElement('div');
+  stage.className = 'stage3d';
+  trio.appendChild(stage);
+  ST.stage = stage;
+  ST.trio = trio;                 /* 展台挂在 trio 上，定位要用 trio 的高度 */
+  ST.stageHeight = stageH;
+
+  // 卡片
+  ST.cards = [];
+  ST.dots = [];
+  var imgPending = ST.n;
+
+  valid.forEach(function(v,i){
+    var card = document.createElement('div');
+    card.className = 'card3d';
+    card.dataset.idx = String(v.vi);
+    card.dataset.vi = String(i);
+    card.style.width = cardW + 'px';
+    card.style.height = cardH + 'px';
+    card.style.marginLeft = (-cardW/2) + 'px';
+    card.style.marginTop  = (-cardH/2) + 'px';
+
+    if(v.data.src){
+      var im = document.createElement('img');
+      im.alt = v.cap.base || '';
+      im.draggable = false;
+      im.addEventListener('load', function(){ if(--imgPending<=0) start3DLoop(); });
+      im.addEventListener('error', function(){ if(--imgPending<=0) start3DLoop(); });
+      im.src = v.data.src;
+      card.appendChild(im);
+
+    } else {
+      var ph = document.createElement('div');
+      ph.className = 'empty';
+      ph.textContent = '未选择';
+      card.appendChild(ph);
+      imgPending--;
+    }
+
+    stage.appendChild(card);
+    ST.cards.push({ el:card, data:v.data, cap:v.cap, vi:i });
+  });
+
+  // 图注条
+  var capbar = document.createElement('div');
+  capbar.className = 'capbar3d';
+  capbar.innerHTML =
+    '<span class="cap-num" id="capNum3d">I</span>' +
+    '<span class="cap-name" id="capName3d">HOME</span>' +
+    '<span class="pgsel" id="pgsel3d"></span>';
+
+  // 展台底边进度细线
+  var capRule = document.createElement('div');
+  capRule.className = 'cap-rule';
+  capRule.innerHTML = '<i></i>';
+  trio.appendChild(capRule);
+  ST.capRuleEl = capRule.querySelector('i');
+  /* 展签式：不生成页码点，3D 侧翼卡片 + 拖拽即导航 */
+  trio.parentNode.insertBefore(capbar, trio.nextSibling);
+  ST.capNumEl = capbar.querySelector('.cap-num');
+  ST.capNameEl = capbar.querySelector('.cap-name');
+
+  /* 页码选择器：n 个细横条 + 一个滑动的指示块。
+     点条不会重建 DOM，只移动指示块，所以切换时是滑动而不是跳变。 */
+  ST.pgSel = capbar.querySelector('#pgsel3d');
+  /* 页码指标：环形默认圆点，其余默认细线；深度自定义可强制 */
+  /* 页码也跟布局绑定：相接环给圆点（环是循环的，需要离散刻度），
+     其余一律速度线（细长、克制，不抢展签） */
+  /* 展台与速度线互斥：画了展台就不画速度线，页码改由圆点承担 */
+  var dotsReq = PR.showDots;
+  var hasLedge = (ST.ledgeOn === true);
+  var indKind;
+  if(dotsReq === undefined || dotsReq === null){
+    indKind = (E0.dotsDef || 'line');
+  } else {
+    indKind = toBoolP(dotsReq, false) ? 'dots' : (hasLedge ? 'none' : 'line');
+  }
+  document.documentElement.setAttribute('data-ind', indKind);
+  if(!toBoolP(PR.showCapsNum, true)) document.documentElement.setAttribute('data-cap-num', 'off');
+  else document.documentElement.removeAttribute('data-cap-num');
+
+  ST.pgDots = [];
+  if(ST.pgSel && ST.n > 1){
+    for(var pj = 0; pj < ST.n; pj++){
+      var pg = document.createElement('button');
+      pg.type = 'button';
+      pg.className = 'pg';
+      pg.dataset.vi = String(pj);
+      pg.setAttribute('aria-label', '第 ' + (pj + 1) + ' 页');
+      ST.pgSel.appendChild(pg);
+      ST.pgDots.push(pg);
+    }
+    // 指示块垫在最上层，不参与点击
+    // 点击跳转
+    ST.pgSel.addEventListener('click', function(e){
+      var t = e.target;
+      if(!t || !t.dataset || t.dataset.vi == null) return;
+      var vi = parseInt(t.dataset.vi, 10);
+      if(!isFinite(vi)) return;
+      goTo3D(vi, true);
+    });
+  } else if(ST.pgSel){
+    ST.pgSel.style.display = 'none';
+  }
+
+  // 初始主展品：中间那张
+  ST.activeVi = Math.floor((ST.n - 1) / 2);
+  ST.p = ST.activeVi / ST.n;
+  ST.playing = toBoolP(PR.autoPlay, true);
+
+  // 首次渲染
+  render3D(phase3D(ST.p, ST.n));
+
+  // 事件
+  bind3DEvents(trio, stage, capbar);
+
+  // 如果所有 img 已经 complete，启动
+  if(imgPending <= 0) start3DLoop();
+}
+
+/* 每种布局的推荐值：深度自定义关闭时直接吃这套，开关才有意义 */
+var LAYOUT3D_DEFAULTS = {
+  /* 每种布局一整套调好的值：
+     cadence 推进节奏 | fill 一次推进的手感 | ledgeTop 台面落点
+     ledge 该布局默认展台（null = 不画）| dots 该布局默认页码（line 速度线 / dots 圆点）
+     原则：展台与速度线互斥 —— 有展台就只给圆点，没展台才用速度线。 */
+  coverflow: { angle:26, depth:70,  spacing:28, cardK:0.87, persp:1100, cadence:'hold',  float:0,   fog:30, blur:0.8, ledgeTop:0.94, ledge:'shelf3d', dots:'dots', fill:{ dur:720,  curv:'outExpo'    } },
+  ring:      { angle:0,  depth:0,   spacing:46, cardK:0.54, persp:1200, cadence:'drift', float:2.6, fog:22, blur:0.6, ledgeTop:0.90, ledge:null,      dots:'line', fill:{ dur:900,  curv:'inOutCubic' } },
+  ringTight: { angle:0,  depth:0,   spacing:44, cardK:0.50, persp:1100, cadence:'drift', float:3.2, fog:22, blur:0.6, ledgeTop:0.92, ledge:null,      dots:'line', fill:{ dur:900,  curv:'inOutCubic' } },
+  fan:       { angle:30, depth:22,  spacing:40, cardK:0.62, persp:1100, cadence:'even',  float:0,   fog:34, blur:1.0, ledgeTop:0.88, ledge:null,      dots:'line', fill:{ dur:760,  curv:'outBack'     } },
+  stack:     { angle:9,  depth:150, spacing:20, cardK:0.80, persp:900,  cadence:'drift', float:0,   fog:40, blur:1.2, ledgeTop:0.95, ledge:'shelf3d', dots:'dots', fill:{ dur:1100, curv:'outCubic'    } },
+  carousel:  { angle:46, depth:120, spacing:34, cardK:0.74, persp:1000, cadence:'drift', float:0,   fog:34, blur:1.0, ledgeTop:0.86, ledge:null,      dots:'line', fill:{ dur:820,  curv:'inOutCubic' } },
+  helix:     { angle:40, depth:150, spacing:30, cardK:0.64, persp:1300, cadence:'drift', float:0,   fog:44, blur:1.2, ledgeTop:0.93, ledge:null,      dots:'line', fill:{ dur:1000, curv:'inOutCubic' } },
+  tunnel:    { angle:0,  depth:170, spacing:26, cardK:0.86, persp:800,  cadence:'even',  float:0,   fog:52, blur:1.4, ledgeTop:0.97, ledge:null,      dots:'line', fill:{ dur:900,  curv:'outCubic'    } },
+  arc:       { angle:18, depth:90,  spacing:30, cardK:0.66, persp:1200, cadence:'even',  float:0,   fog:32, blur:0.9, ledgeTop:0.90, ledge:'shelf',   dots:'dots', fill:{ dur:780,  curv:'outCubic'    } }
+};
+function layout3dDefaults(mode){
+  return LAYOUT3D_DEFAULTS[mode] || LAYOUT3D_DEFAULTS.coverflow;
+}
+/* 合并参数：deep3D 关闭时忽略用户滑块值，用该布局推荐值 */
+function eff3D(PR){
+  var mode = String((PR && PR.layout3dMode) || 'coverflow');
+  /* 单人环：ring 与 ringFloat 合并 —— 静帧预览里两者只差宽窄，合并后由浮动幅度区分 */
+  /* 旧数据兼容：ringFloat 是「相接环」的旧名字 */
+  if(mode === 'ringFloat') mode = 'ringTight';
+  if(!LAYOUT3D_DEFAULTS[mode]) mode = 'coverflow';
+  var d = layout3dDefaults(mode);
+  var deep = toBoolP(PR && PR.deep3D, false);
+  /* 细调按组开关：chordGroup 决定角度/景深/间距哪几个被覆盖 */
+  var cg = String((PR && PR.chordGroup) || 'def');
+  var useAngle = deep && (cg === 'angle' || cg === 'all');
+  var useDepth = deep && (cg === 'depth' || cg === 'all');
+  var useSpace = deep && (cg === 'spacing' || cg === 'all');
+  return {
+    mode: mode,
+    deep: deep,
+    angle: useAngle ? clampN(toNumP(PR.angle, d.angle), 0, 60) : d.angle,
+    depth: useDepth ? clampN(toNumP(PR.depth, d.depth), 0, 180) : d.depth,
+    spacing: useSpace ? clampN(toNumP(PR.spacing, d.spacing), 0, 100) : d.spacing,
+    cardK: d.cardK,
+    persp: d.persp || 1100,
+    cadence: d.cadence,
+    fill: d.fill || { dur:720, curv:'outExpo' },
+    ledgeTop: (d.ledgeTop == null ? 0.94 : d.ledgeTop),
+    ledgeDef: (d.ledge || null),
+    dotsDef: (d.dots || 'line'),
+    floatD: d.float, fogD: d.fog, blurD: d.blur, pitchD: d.pitch
+  };
+}
+
+function layout3D(d,n,E,idx,phase){
+  var mode = E.mode, angle = E.angle, depth = E.depth, spacing = E.spacing;
+  var W = ST.cardW || 160;
+  var stageW = (ST.stage && ST.stage.clientWidth > 40) ? ST.stage.clientWidth : 556;
+  var ad = Math.abs(d);
+  var x=0,y=0,z=0,rx=0,ry=0,rz=0,sc=1,op=1;
+  var fadeStart,fadeEnd;
+  if(n<=2){fadeStart=9;fadeEnd=10;}
+  else{fadeEnd=n/2;fadeStart=fadeEnd-0.5;}
+
+  /* ---------------------------------------------------------------
+     ring / 环形：椭圆轨道，卡片贴得很近，俯视看是一个六边形。
+     这是你认可的版本 —— 别再动它。
+     要点：横向拉宽 1.58、纵深 1.55、旋转压到 0.46，
+     这样侧卡既贴得紧、又看得清正面，围出的多边形才有「环」的体积感。
+     --------------------------------------------------------------- */
+  if(mode === 'ringTight'){
+    /* ---------- 相接环：浮光原版的纯圆环 ----------
+       半径 = 间距 × max(2.6, n×0.62)，卡沿正圆排开、统一 0.92 缩放，
+       前景那张不放大 —— 六张卡片首尾相接，围成一个完整的圆。
+       透明度 pow(cos,1.5) 让背后那几张自然隐退。 */
+    var stepT = 360 / n, angT = d * stepT, radT = angT * Math.PI / 180;
+    /* 浮光的 R 是「px 单位的半径」，我们这儿的尺寸小得多（640 宽），
+       按卡片宽度折算：相邻两卡在圆上的弦长 ≈ 卡宽 × 1.02 */
+    var chordT = W * clampN(spacing / 44, 0.85, 1.25);   // 间距滑块直接调圆环的松紧
+    var RT = chordT / Math.max(0.05, 2 * Math.sin(Math.PI / n));
+    var rMaxT = stageW * 0.42;
+    if(RT > rMaxT) RT = rMaxT;
+    x = Math.sin(radT) * RT;
+    z = Math.cos(radT) * RT - RT;
+    ry = angT;
+    sc = 0.92;
+    op = Math.pow(Math.max(0, 0.5 + 0.5 * Math.cos(radT)), 1.5);
+    var ampT = toBoolP((ST.params || {}).deep3D, false)
+      ? clampN(toNumP((ST.params || {}).floatAmp, E.floatD != null ? E.floatD : 3.2), 0, 10)
+      : (E.floatD != null ? E.floatD : 3.2);
+    var cgT = String((ST.params || {}).chordGroup || 'def');
+    if(!(cgT === 'float' || cgT === 'all')) ampT = (E.floatD != null ? E.floatD : 0);
+    if(ampT > 0) y += Math.sin((phase||0)*Math.PI*2*2 + (idx||0)*1.7) * ampT;
+
+  } else if(mode==='ring'){
+    /* 两种环，刻意做成不同密度：
+       · ring      宽松版 —— 卡片之间留出明显间隙，两侧留白多，气口大
+       · ringTight 相接版 —— 卡片边缘刚好相接，围成一块完整的「六边形体」
+       用户要的就是这两者的对比，所以参数不要互相干扰。 */
+    var step = 360/n, ang = d*step, rad = ang*Math.PI/180;
+    var ROTK = 0.46;
+    var R;
+
+    /* 两款环，固定两种几何：
+       · ring       宽松 —— 卡之间留气口，围出一个有空隙的环
+       · ringTight  相接 —— 按相邻两卡的实际投影宽反推半径，边缘刚好相接，围成一块整体 */
+    /* 相接环内边距为 0、靠紧密排列，宽松环留 60% 的间隙 */
+    var tz = (mode === 'ringTight') ? 0 : 0.72;   // 宽松环留 72% 间隙；相接环走下面的浮光圆环
+    var gapWant = clampN(spacing * 0.30, 6, 26);
+    var aA = Math.abs(0.5 * step) * ROTK * Math.PI/180;
+    var aB = Math.abs(1.5 * step) * ROTK * Math.PI/180;
+    var needDist = ((W * Math.abs(Math.cos(aA)) + W * Math.abs(Math.cos(aB))) / 2 + gapWant) * 0.99;
+    var sinStep = Math.max(0.02, Math.sin(step * Math.PI/180));
+    var rTight = needDist / (sinStep * 1.30);
+    var rLoose = Math.min(Math.max(W * 1.0, spacing * Math.max(2.0, n * 0.44)), stageW * 0.34);
+    var R = rTight + (rLoose - rTight) * tz;
+    var rMin = W * 0.26;
+    if(R < rMin) R = rMin;
+
+    /* 横向拉伸：宽松版拉得更开（1.58），紧凑版 1.30 —— 这也是两者观感差异的一部分 */
+    var stretch = 1.30 + (1.58 - 1.30) * tz;
+    var zMul    = 1.15 + (1.55 - 1.15) * tz;
+
+    /* 上限：别越出舞台 */
+    var farD = Math.min(Math.ceil(n/2), 2);
+    var sinFar = Math.abs(Math.sin(farD * step * Math.PI/180));
+    var xLimit = stageW * 0.47 - W * 0.5;
+    if(sinFar > 0.01 && sinFar * R * stretch > xLimit) R = xLimit / (sinFar * stretch);
+
+    x = Math.sin(rad) * R * stretch;
+    z = (Math.cos(rad) - 1) * R * zMul;
+    ry = ang * ROTK;
+    sc = 1 - 0.05 * Math.abs(Math.sin(rad));
+    var cf = 0.5 + 0.5*Math.cos(rad);
+    op = Math.pow(Math.max(0, cf), 0.55);
+
+    /* ringFloat：极轻的呼吸感。
+       之前 amp = 7 + spacing*0.055（约 9px），六张一起动显得晃。
+       收到 2.2~3.4px，并且降低频率（3 → 2），看起来才像「悬浮」而不是「抖动」。 */
+    if(true){
+      var PRr = ST.params || {};
+      var useFloat = toBoolP(PRr.deep3D, false) && (String(PRr.chordGroup || 'def') === 'float' || String(PRr.chordGroup) === 'all');
+      var amp = useFloat ? clampN(toNumP(PRr.floatAmp, E.floatD != null ? E.floatD : 2.6), 0, 10)
+                         : (E.floatD != null ? E.floatD : 2.6);
+      if(amp > 0){
+      y += Math.sin((phase||0)*Math.PI*2*2 + (idx||0)*1.7) * amp;
+      }
+    }
+
+  } else if(mode==='carousel'){
+    /* 圆弧：同样是一圈，但只展示正面那一段弧，卡沿弧线排开、朝向圆心 */
+    /* 圆弧：一排卡沿一段圆弧分开排，中间近、两边远，朝圆心收 —— 展台感 */
+    var cAng = d * (16 + spacing * 0.16);       // 每张卡的弧角（°）
+    var cRad = cAng * Math.PI/180;
+    var cR = Math.min(stageW * 0.46, Math.max(W * 2.6, n * W * 0.38));
+    x = Math.sin(cRad) * cR;
+    y = (1 - Math.cos(cRad)) * cR * 0.34;
+    z = (Math.cos(cRad) - 1) * cR * 0.55 - ad * depth * 0.2;
+    ry = -cAng * 0.8;
+    sc = Math.max(0.74, 1 - 0.05 * ad);
+    op = fadeR(ad, Math.min(fadeEnd, 2.6), Math.min(fadeEnd, 3.2));
+
+  } else if(mode==='helix'){
+    /* 螺旋：整圈里每张卡同时前后错开，转一圈回到原点的错觉最轻 */
+    /* 螺旋：只展示一整圈的 34%，卡一张比一张略远、略转，形成纵深错位 */
+    var hStep = 26 + spacing * 0.22;
+    var hAng = d * hStep;
+    var hRad = hAng * Math.PI/180;
+    var hRx = Math.max(W * 1.4, spacing * Math.max(3.0, n * 0.5));
+    x = Math.sin(hRad) * hRx;
+    y = Math.sin(hRad) * (W * 0.55 + spacing * 0.3) * 0.6;
+    z = (Math.cos(hRad) - 1) * hRx * 0.9 - ad * depth * 0.3;
+    ry = -hAng * 0.9;
+    sc = 1 - 0.05 * ad;
+    op = fadeR(ad, fadeStart, fadeEnd);
+
+  } else if(mode==='tunnel'){
+    /* 隧道：卡不动位置，只按深度缩放 —— 像镜头往画面里推 */
+    var tMax = Math.max(2, Math.ceil(n / 2));
+    var tK = ad / tMax;                        // 0 中心 → 1 最远
+    x = d * (W * 0.30 + spacing * 0.18);
+    y = 0;
+    z = -tK * depth * 1.6;
+    ry = -d * angle * 0.35;
+    rz = -d * 0.8;
+    sc = 1 - tK * 0.52;
+    op = Math.max(0, 1 - tK * 1.05);
+
+  } else if(mode==='arc'){
+    /* 拱形：中间高、两边低，卡片微微向内侧倒，像一扇帘幕 */
+    var aStep2 = W * 0.66 + spacing * 0.5;
+    var axMax = (stageW/2 - W*0.5) / Math.max(2, Math.ceil(n/2));
+    if(aStep2 > axMax) aStep2 = axMax;
+    x = d * aStep2;
+    y = -(1 - Math.cos(Math.min(Math.PI, ad * 0.42))) * (W * 1.05 + spacing * 0.4);
+    z = -ad * depth * 0.22;
+    ry = -d * angle * 0.55;
+    rz = -d * angle * 0.12;
+    sc = Math.max(0.8, 1 - 0.045 * ad);
+    op = fadeR(ad, fadeStart, fadeEnd);
+
+  } else if(mode==='fan'){
+    var far2 = Math.max(1, n/2);
+    var gapPx = 6 + spacing*0.16;
+    var fxMax = (stageW/2 - W*0.10) / far2;
+    var fx = Math.min(W*0.62 + gapPx, fxMax);
+    x = d*fx;
+    z = -ad*depth*0.6;
+    ry = -d*angle*1.35;
+    sc = Math.max(0.78, 1 - 0.075*ad);
+    op = fadeR(ad, fadeStart, fadeEnd);
+
+  } else if(mode==='stack'){
+    var stStep = Math.max(20, W * (0.13 + spacing * 0.0011));
+    x = d * stStep;
+    y = -ad * stStep * 0.62;
+    z = -ad * depth * 0.5;
+    ry = -d * angle * 0.5;
+    rz = -d * 1.6;
+    sc = 1;
+    op = Math.max(0.42, 1 - 0.115*ad);
+
+  } else {
+    // coverflow
+    var slot = W*0.55 + spacing;
+    var projW2 = W * Math.abs(Math.cos(Math.min(89, 2*angle) * Math.PI/180)) * 0.94;
+    var cfFar = Math.max(1, Math.ceil(n/2));
+    var slotMax = Math.max(W*0.30, (stageW/2 - projW2/2 - 8) / cfFar);
+    if(slot > slotMax) slot = slotMax;
+    x = d*slot;
+    z = -ad*depth;
+    ry = -d*angle;
+    sc = 1 - Math.min(ad,2.6)*0.085;
+    op = fadeR(ad, fadeStart, fadeEnd);
+  }
+
+  return {x:x,y:y,z:z,rx:rx,ry:ry,rz:rz,sc:sc,op:op};
+}
+
+function render3D(t){
+  var n = ST.n;
+  if(!n || !ST.cards.length) return;
+  var PR = ST.params || {};
+  var E = eff3D(PR);
+  ST.eff = E;
+  /* 布局名写到 html 上，CSS 靠它切阴影 */
+  document.documentElement.setAttribute('data-lay3d', E.mode);
+  // phase：整圈进度 0..1，供浮动布局使用（由 t 推导，seekAnimation 时同样确定）
+  var phase = (t / n) % 1;
+  /* 展台位置：跟着布局走。
+     注意 —— 展台是挂在 .trio 上的，不是挂在 stage 里，
+     所以基准高度必须用 trio 的高度（stage 是 inset:0 的绝对层，高度不可靠）。 */
+  if(ST.ledgeEl){
+    var ltP = (E.ledgeTop == null ? 0.94 : E.ledgeTop);
+    var hostH = (ST.trio && ST.trio.clientHeight) ? ST.trio.clientHeight : (ST.stageHeight || 380);
+    var lTop = Math.round(hostH * ltP);
+    ST.ledgeEl.style.top = lTop + 'px'; ST.ledgeLastTop = lTop;
+    ST.ledgeTopPx = lTop;
+  }
+  /* 俯仰：整组卡片绕 X 轴轻转，全景有一点点「平视展台」的角度 */
+  var cgP = String(PR.chordGroup || 'def');
+  var usePitch = toBoolP(PR.deep3D, false) && (cgP === 'pitch' || cgP === 'all');
+  var pitchD = usePitch ? toNumP(PR.pitch, E.pitchD || 0) : (E.pitchD || 0);
+  if(ST.stage && ST.stage.style.transform !== 'rotateX(' + (-pitchD).toFixed(2) + 'deg)') ST.stage.style.transform = 'rotateX(' + (-pitchD).toFixed(2) + 'deg)';
+
+  for(var i=0;i<n;i++){
+    var card = ST.cards[i];
+    if(!card) continue;
+    var d = wrapD(i - t, n);
+    var tr = layout3D(d, n, E, i, phase);
+
+    if(!ST.has3D){
+      card.el.style.opacity = (Math.abs(d) < 0.55 ? '1' : '0');
+      card.el.style.transform =
+        'translate3d(' + (d*8).toFixed(2) + 'px,0,0) scale(' +
+        (Math.abs(d) < 0.55 ? 1 : 0.9).toFixed(3) + ')';
+      continue;
+    }
+
+    /* 景深层雾：远处卡片轻微被舞台色吃掉，空间感靠这层空气 */
+    var deepOn = toBoolP(PR.deep3D, false);
+    var mg = String(PR.motionGroup || 'def');
+    var useFog = deepOn && (mg === 'fog' || mg === 'all');
+    var fogK = clampN(useFog ? toNumP(PR.depthFog, E.fogD) : E.fogD, 0, 80) / 100;
+    var fog = fogK > 0 ? (1 - Math.pow(tr.op, 1.15)) * fogK : 0;
+    var blurK = clampN(useFog ? toNumP(PR.focusBlur, E.blurD) : E.blurD, 0, 4);
+    var bz = blurK > 0 ? Math.min(blurK, Math.abs(d) * blurK * 0.9) : 0;
+    var fset = '';
+    if(fog > 0.005) fset += 'brightness(' + (1 - fog * 0.28).toFixed(3) + ') ';
+    if(bz > 0.05) fset += 'blur(' + bz.toFixed(2) + 'px)';
+    if(card.el.style.filter !== fset) card.el.style.filter = fset;
+    card.el.style.opacity = tr.op.toFixed(3);
+    card.el.style.transform =
+      'translate3d(' + tr.x.toFixed(2) + 'px,' + tr.y.toFixed(2) + 'px,' + tr.z.toFixed(2) + 'px) ' +
+      'rotateX(' + tr.rx.toFixed(2) + 'deg) ' +
+      'rotateY(' + tr.ry.toFixed(2) + 'deg) ' +
+      (tr.rz ? 'rotate(' + tr.rz.toFixed(2) + 'deg) ' : '') +
+      'scale(' + tr.sc.toFixed(4) + ')';
+    card.el.style.zIndex = String(200 - Math.round(Math.abs(d) * 10));
+  }
+
+  updateCap3D(t);
+}
+
+function updateCap3D(t){
+  var n = ST.n;
+  if(!n) return;
+  var vi = Math.round(t) % n;
+  if(vi < 0) vi += n;
+
+  var card = ST.cards[vi];
+  if(!card) return;
+  var cap = card.cap || {};
+
+  var ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  var total = ROMAN[n - 1] || String(n);
+  if(ST.capNumEl){
+    ST.capNumEl.innerHTML = (ROMAN[card.vi] || String(card.vi + 1)) +
+      '<i>/' + total + '</i>';
+  }
+  if(ST.capRuleEl){
+    ST.capRuleEl.style.width = ((((t / n) % 1 + 1) % 1) * 100).toFixed(2) + '%';
+  }
+
+  /* 页码指示块：滑到当前页那一条的位置，并把它拉长一点。
+     用 offsetLeft 而不是 index*gap —— 条宽和间距都由 CSS 决定，
+     这里读真实布局，改样式不会算错。 */
+  /* 只有 1 页时，任何页码指标都没有意义 —— 整条隐藏 */
+  if(ST.capRuleEl) ST.capRuleEl.parentNode.style.display = (n > 1) ? '' : 'none';
+  if(ST.pgSel) ST.pgSel.style.display = (n > 1 && ST.pgSel.children.length > 1) ? '' : 'none';
+
+  /* 页码点：当前页那条加 .active，由 CSS 变长变色。
+     没有坐标计算，切布局/改字号都不会错位。 */
+  for(var di = 0; di < ST.pgDots.length; di++){
+    if(di === vi) ST.pgDots[di].classList.add('active');
+    else ST.pgDots[di].classList.remove('active');
+  }
+
+  if(ST.capNameEl){
+    var txt = String(cap.base || '');
+    if(cap.mark) txt += '<b>' + cap.mark + '</b>';
+    ST.capNameEl.innerHTML = txt;
+  }
+
+  for(var i=0;i<ST.dots.length;i++){
+    ST.dots[i].classList.toggle('active', i === vi);
+  }
+  ST.activeVi = vi;
+}
+
+function phase3D(p,n){
+  if(n<=0) return 0;
+  /* 节奏：hold 停顿后走（默认）/ even 匀速 / drift 连续缓漂 */
+  var PRc = ST.params || {};
+  var cad = String(PRc.pace || 'auto');
+  /* pace 里凡是 HOLD/EVEN/DRIFT 三档就读它，其余（auto/slow/normal/fast）读模式自带节奏 */
+  if(cad !== 'hold' && cad !== 'even' && cad !== 'drift'){
+    cad = (ST.eff && ST.eff.cadence) || 'hold';
+  }
+  if(cad === 'drift'){ return p * n; }
+  if(cad === 'even'){
+    var kE = p*n, kiE = Math.floor(kE), fE = kE - kiE;
+    var uE = Math.min(1, fE/0.72);
+    return kiE + (uE < 0.5 ? 4*uE*uE*uE : 1 - Math.pow(-2*uE+2,3)/2);
+  }
+  // 预览节奏：每张 interval 的 50% 缓动，50% 静止
+  var k = p*n;
+  var ki = Math.floor(k);
+  var f = k - ki;
+  var TR = 0.5;
+  var local = (f < TR) ? (4*Math.pow(f/TR,3)/1) : 1;
+  // 用 easeInOut 更自然
+  var u = Math.min(f/TR, 1);
+  local = u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u+2,3)/2;
+  return ki + local;
+}
+
+function start3DLoop(){
+  if(ST.raf) cancelAnimationFrame(ST.raf);
+  ST.lastTs = 0;
+  ST.raf = requestAnimationFrame(loop3D);
+}
+function stop3DLoop(){
+  if(ST.raf){ cancelAnimationFrame(ST.raf); ST.raf = 0; }
+}
+function loop3D(ts){
+  ST.raf = requestAnimationFrame(loop3D);
+  if(!ST.lastTs){ ST.lastTs = ts; return; }
+  var dt = (ts - ST.lastTs) / 1000;
+  ST.lastTs = ts;
+  if(dt > 0.2) dt = 0.2;
+  if(dt < 0) dt = 0;
+
+  // 刚 seek 过：让位给 GIF 定位
+  if(ST.lastSeek && (ts - ST.lastSeek) < 900) return;
+
+  var n = ST.n;
+  if(!n) return;
+  var PR = ST.params || {};
+  var pace = String(PR.pace || 'auto');
+  var PACE = { slow:6, normal:4, fast:2.5 };
+  var interval = clampN(PACE[pace] || toNumP(PR.interval, 4), 1, 8);   // 停顿走/匀速/缓漂用默认 4 秒
+
+  if(ST.playing && !ST.drag){
+    ST.p += dt / (n * interval);
+    if(ST.p > 1) ST.p = ST.p % 1;
+  }
+
+  var t = phase3D(ST.p, n);
+  render3D(t);
+}
+
+function goTo3D(vi, user){
+  var n = ST.n;
+  if(!n) return;
+  if(ST.glideRaf){ cancelAnimationFrame(ST.glideRaf); ST.glideRaf = 0; }
+  vi = ((vi % n) + n) % n;
+  ST.p = vi / n;
+  ST.lastSeek = 0;
+  if(user) ST.playing = false;
+  render3D(phase3D(ST.p, n));
+}
+
+/* 松手后的滑行：先按速度滑一小段（easeOut），再吸附到最近的卡。
+   滑行终点由速度算，所以轻甩慢一点、快甩多走一格；snapToCard 关掉就停在原地。 */
+/* 松手后的滑行：先按速度滑一小段（easeOut），再吸附到最近的卡。
+   滑行终点由速度算，所以轻甩慢一点、快甩多走一格；snapToCard 关掉就停在原地。
+   curv 可换：outCubic（甩手）/ outBack（带一点回弹）/ inOutCubic（缓入缓出） */
+function glide3D(vel, resumePlay, durMs, curv){
+  var n = ST.n;
+  if(!n){ return; }
+  var PR = ST.params || {};
+  var snap = toBoolP(PR.snapToCard, true);
+  var p0 = ST.p;
+  var pEnd = p0 + (vel || 0) / n;
+  if(snap){
+    var target = Math.round(pEnd * n);
+    if(Math.abs(vel) > 0.55){ target = Math.round(p0 * n) + (vel > 0 ? -1 : 1); }
+    pEnd = target / n;
+  }
+  pEnd = ((pEnd % 1) + 1) % 1;
+  var dur = durMs || (snap ? clampN(240 + Math.abs(vel) * 160, 240, 620) : 260);
+  var ease = CURV[curv || 'outCubic'] || CURV.outCubic;
+  var t0 = performance.now();
+  if(ST.glideRaf) cancelAnimationFrame(ST.glideRaf);
+  var from = p0;
+  var span = pEnd - p0;
+  if(span > 0.5) span -= 1;
+  if(span < -0.5) span += 1;
+  function step(){
+    var u = Math.min(1, (performance.now() - t0) / dur);
+    var e = ease(u);
+    var p = ((from + span * e) % 1 + 1) % 1;
+    ST.p = p;
+    render3D(phase3D(p, n));
+    if(u < 1){ ST.glideRaf = requestAnimationFrame(step); }
+    else { ST.glideRaf = 0; ST.p = ((pEnd % 1) + 1) % 1; render3D(phase3D(ST.p, n)); }
+  }
+  ST.glideRaf = requestAnimationFrame(step);
+  ST.playing = !!resumePlay;
+  ST.drag = null;
+}
+var CURV = {
+  linear:    function(u){ return u; },
+  outCubic:  function(u){ return 1 - Math.pow(1-u, 3); },
+  inOutCubic:function(u){ return u < .5 ? 4*u*u*u : 1 - Math.pow(-2*u+2, 3)/2; },
+  outBack:   function(u){ var c1 = 1.70158, c3 = c1+1; return 1 + c3*Math.pow(u-1,3) + c1*Math.pow(u-1,2); },
+  outExpo:   function(u){ return u >= 1 ? 1 : 1 - Math.pow(2, -10*u); }
+};
+
+function bind3DEvents(trio, stage, capbar){
+  if(ST.bound) return;
+  ST.bound = true;
+
+  // 指针
+  stage.addEventListener('pointerdown', function(e){
+    if(!ST.n) return;
+    if(e.button != null && e.button !== 0) return;
+    if(ST.lastSeek && (performance.now() - ST.lastSeek) < 900) return;
+
+    var target = e.target;
+    if(target && target.closest && target.closest('button')) return;
+
+    var cardEl = (target && target.closest) ? target.closest('.card3d') : null;
+    ST.drag = {
+      id: e.pointerId,
+      x0: e.clientX,
+      p0: ST.p,
+      moved: false,
+      cardEl: cardEl,
+      wasPlaying: ST.playing
+    };
+    ST.playing = false;
+    try{ stage.setPointerCapture(e.pointerId); }catch(err){}
+  }, {passive:true});
+
+  stage.addEventListener('pointermove', function(e){
+    var d = ST.drag;
+    if(!d || e.pointerId !== d.id) return;
+    var dx = e.clientX - d.x0;
+    if(!d.moved && Math.abs(dx) > 8) d.moved = true;
+    if(!d.moved) return;
+
+    /* 速度采样：最近 90ms 的窗口，给松手后的惯性用 */
+    var nowT = performance.now();
+    d.samples = d.samples || [];
+    d.samples.push({ t: nowT, x: e.clientX });
+    while(d.samples.length > 2 && nowT - d.samples[0].t > 90) d.samples.shift();
+
+    var n = ST.n;
+    if(!n) return;
+    var np = d.p0 - dx * (1 / (n * 130));
+    np = ((np % 1) + 1) % 1;
+    ST.p = np;
+    render3D(np * n);
+  }, {passive:true});
+
+  function endDrag(e){
+    var d = ST.drag;
+    if(!d) return;
+    if(e && e.pointerId !== undefined && e.pointerId !== d.id) return;
+    ST.drag = null;
+
+    var n = ST.n;
+    if(!n) return;
+
+    if(d.moved){
+      /* 松手速度（px/ms）→ 继续滑行一小段，再吸附到最近的卡 */
+      var smp = d.samples || [];
+      var v = 0;
+      if(smp.length >= 2){
+        var a0 = smp[0], a1 = smp[smp.length - 1];
+        var dtt = Math.max(1, a1.t - a0.t);
+        v = (a1.x - a0.x) / dtt;                 // 正 = 往右甩
+      }
+      var PRx = ST.params || {};
+      var inertia = toBoolP(PRx.dragInertia, true);
+      var glide = inertia ? clampN(-v * 190, -1.6, 1.6) : 0;
+      glide3D(glide, d.wasPlaying);
+      return;
+    }
+
+    if(d.cardEl){
+      var vi = parseInt(d.cardEl.dataset.vi, 10);
+      if(isFinite(vi)){
+        if(vi === ST.activeVi){
+          // 点击中央：暂停/继续
+          ST.playing = !ST.playing;
+        } else {
+          goTo3D(vi, true);
+        }
+      }
+    }
+  }
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('lostpointercapture', endDrag);
+
+  // 页面可见性
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) stop3DLoop();
+    else if(ST.active && ST.n) start3DLoop();
+  });
+}
+
+/* ============================================================
+   seekAnimation：GIF 导出时按进度直接定位
+   ============================================================ */
+function seekAnimation(progress){
+  if(!ST.active || !ST.n) return false;
+  var p = Number(progress);
+  if(!isFinite(p)) p = 0;
+  p = clampN(p, 0, 1);
+
+  ST.lastSeek = performance.now();
+  try{
+    // 一卡一段：段内用该模式的「甩手感」曲线，模拟拖拽推进，首尾仍无缝
+    var nS = ST.n;
+    var Ese = eff3D(ST.params || {});
+    var fl = Ese.fill || { dur:720, curv:'outExpo' };
+    var mgS = String((ST.params && ST.params.motionGroup) || 'def');
+    var cf2 = (mgS === 'curve' || mgS === 'all') ? String((ST.params && ST.params.seekCurve) || 'mode') : 'mode';
+    var ck = (cf2 === 'mode') ? fl.curv : cf2;
+    var ez = CURV[ck] || CURV.outExpo;
+    var k2 = p * nS, ki2 = Math.floor(k2), f2 = k2 - ki2;
+    /* 曲线只用前 78% 的段宽，剩下 22% 停一停 —— 一卡一卡的节奏 */
+    var u2 = Math.min(1, f2 / 0.78);
+    var t = ki2 + ez(u2);
+    render3D(t);
+  }catch(err){}
+  return true;
+}
+
+/* ============================================================
+   render 主流程（在原有基础上加 3D 分支）
+   ============================================================ */
+function render(payload){
+  payload = payload || {};
+  stop3DLoop();
+  ST.active = false;
+
+  var P = read(payload);
+  var poster = document.getElementById('poster');
+  var paper = P.background;
+
+  var userBg = pickBg(payload);
+  if(userBg && isColor(userBg)){
+    var solid = solidOf(userBg);
+    if(solid) P.deskBase = solid;
+  }
+  var paperC = paperOf(P);
+  poster.style.setProperty('--tintPaper',
+    'rgba(' + rgb(paperC).join(',') + ',' + (P.bgVeil || 0.80) + ')');
+  applyDesk(payload, P.ink);
+
+  if(!pickBg(payload)){
+    extractPalette(P.shots, function(colors){
+      if(!colors || !colors.length) return;
+      var avgSat = colors.reduce(function(s,o){
+        var mx = Math.max(o.r,o.g,o.b), mn = Math.min(o.r,o.g,o.b);
+        return s + (mx === 0 ? 0 : (mx - mn) / mx);
+      }, 0) / colors.length;
+      if(avgSat < 0.14) return;
+      var bgEl = document.getElementById('deskBg');
+      if(!bgEl) return;
+      var isDarkAt = lum(P.background) < 0.35;
+      var aurora = auroraBg(colors, paperOf(P), isDarkAt);
+      bgEl.style.backgroundImage = aurora;
+      bgEl.style.backgroundColor = 'transparent';
+      poster.style.setProperty('--aurora', aurora);
+      poster.style.setProperty('--auroraOn', '1');
+      poster.classList.add('has-bg');
+      poster.classList.add('is-plain');
+    });
+  }
+
+  poster.style.setProperty('--ink', P.ink);
+  poster.style.setProperty('--mute', P.muted);
+  poster.style.setProperty('--accent', P.accent);
+  poster.style.setProperty('--paper', paperOf(P));
+
+  var bgL = lum(P.background);
+  var isDark;
+  if(bgL < 0.13) isDark = true;
+  else if(bgL > 0.35) isDark = false;
+  else if(P.darkMode === true) isDark = true;
+  else if(P.darkMode === false) isDark = false;
+  else isDark = lum(P.ink) > bgL;
+
+  var darkCount = 0, lightCount = 0;
+  P.shots.forEach(function(it){
+    if(it.darkMode === true) darkCount++;
+    else if(it.darkMode === false) lightCount++;
+  });
+  var isMixed = darkCount > 0 && lightCount > 0;
+
+  poster.classList.toggle('is-dark', isDark);
+  if(isDark) applyDarkChrome(poster, P);
+  else clearDarkChrome(poster);
+
+  poster.style.setProperty('--title',
+    P.font ? ('"' + P.font + '",' + 'Georgia,"Songti SC",serif') : 'Georgia,"Songti SC",serif');
+  poster.style.setProperty('--sans', '-apple-system,"PingFang SC",sans-serif');
+  poster.style.setProperty('--mono', '"SF Mono","IBM Plex Mono",Menlo,monospace');
+  poster.style.setProperty('--latin', '"Cormorant Garamond",Georgia,serif');
+
+  /* ---------- 拆分标题（原样） ---------- */
+  var splitTitle = '';
+  /* 地址栏要用「完整主题名」，不参与拆分 ——
+     拆分只是为了在标题里把「作者 — 主题」排成上下两行。 */
+  /* 标题：作者在上、名字在下（两行）；只有名字就一行。
+     地址栏显示「名字 · 作者」，是完整署名。 */
+  var fullTitle = String(P.name || '').trim();
+  var titleAuthor = String(P.author || '').trim();
+  var titleLine = fullTitle || titleAuthor;
+
+  (function(){
+    var _hd = document.querySelector('.hd');
+    if (!_hd) return;
+    _hd.style.display = titleLine ? '' : 'none';
+  })();
+
+  (function(){
+    var nameEl = document.getElementById('name');
+    nameEl.innerHTML = '';
+    if (titleAuthor && fullTitle) {
+      var mk = document.createElement('span');
+      mk.className = 'maker';
+      if (hasCJK(titleAuthor)) mk.setAttribute('data-cjk', '1');
+      mk.appendChild(document.createTextNode(titleAuthor));
+      nameEl.appendChild(mk);
+      nameEl.appendChild(document.createTextNode(fullTitle));
+    } else if (fullTitle) {
+      nameEl.textContent = fullTitle;
+    } else if (titleAuthor) {
+      nameEl.textContent = titleAuthor;
+    }
+    splitTitle = fullTitle || titleAuthor;
+  })();
+
+  var intro = document.getElementById('intro');
+  if(P.desc){ intro.textContent = P.desc; intro.style.display = ''; } else { intro.style.display = 'none'; }
+
+  /* 地址栏：用户填了 urlText 就完全按填的显示（可以是任意站点），
+     否则自动拼 reeden.app/theme/名字 · 作者 */
+  (function(){
+    var urlEl = document.getElementById('url');
+    var manualUrl = String((payload && payload.urlText) || '').trim();
+    if(manualUrl){
+      urlEl.innerHTML = '<em>' + esc(manualUrl) + '</em>';
+    } else {
+      urlEl.innerHTML = 'reeden.app/theme/<em>' + esc(fullTitle || titleAuthor) + '</em>' +
+        (fullTitle && titleAuthor ? ' <span class="urlby">· ' + esc(titleAuthor) + '</span>' : '');
+    }
+  })();
+
+  // 地址栏图标
+  /* 开了水印说明这张图是要发出去的，地址栏换成小锁 ——
+     一个「已加锁/已署名」的暗示，比日夜图标更贴当下的语义。 */
+  /* 注意：PR2 在下面才定义，这里必须直接读 payload.params，
+     否则 var 提升到 undefined，锁图标永远不出现。 */
+  var _pNow = (payload && payload.params) || {};
+  var wmOn = wmEnabled(_pNow);
+  var modeIcon;
+  if(wmOn){
+    /* 水印小锁：和模板的细线语汇一致 ——
+       方肩（不用圆角矩形）、锁梁开口略窄、锁孔是一条竖缝而不是圆点。
+       这样它更像印刷品上的一个符号，不像系统 UI 图标。 */
+    modeIcon = '<svg viewBox="0 0 12 12">' +
+      '<path d="M3.15 5.35h5.7v5.05h-5.7z"/>' +          /* 锁体：方肩 */
+      '<path d="M4.35 5.35V3.9a1.65 1.65 0 0 1 3.3 0v1.45"/>' +  /* 锁梁 */
+      '<path d="M6 7.15v1.45"/>' +                        /* 锁孔：竖缝 */
+      '</svg>';
+  } else if(isMixed){
+    modeIcon = '<svg viewBox="0 0 12 12"><rect x="2.6" y="5.4" width="6.8" height="5" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>';
+  } else if(isDark){
+    modeIcon = '<svg viewBox="0 0 12 12"><path d="M9.2 7.6A4.1 4.1 0 0 1 4.4 2.8a4.2 4.2 0 1 0 4.8 4.8z"/></svg>';
+  } else {
+    modeIcon = '<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="2.2"/><path d="M6 1v1.4M6 9.6V11M1 6h1.4M9.6 6H11M2.5 2.5l1 1M8.5 8.5l1 1M9.5 2.5l-1 1M3.5 8.5l-1 1"/></svg>';
+  }
+  document.getElementById('mode').innerHTML = modeIcon;
+
+  // 装饰层
+  var decoEl = document.getElementById('deco');
+  var userBgSet = !!pickBg(payload);
+  var _pv = (payload && payload.params) || {};
+  var decoPick = String(_pv.deco == null ? (_pv.showDeco === false || _pv.showDeco === 'false' ? 'off' : 'auto') : _pv.deco);
+  var decoOn = decoPick !== 'off';
+  CFG.deco = decoPick;
+  if(!userBgSet && decoOn){
+    var dr = decoEl.getBoundingClientRect();
+    var dAsp = (dr.width > 10 && dr.height > 10) ? dr.width / dr.height : 1.4;
+    decoEl.innerHTML = decoOf(P, P.background, P.accent, dAsp);
+  } else {
+    decoEl.innerHTML = '';
+  }
+
+  /* ---------- 图注数据（原样，供静态/3D 共用） ---------- */
+  var PAGE_ZH = {home:'首页',bookshelf:'书架',bookshelfCategory:'分类',reader:'阅读页',statistics:'统计',profile:'我的',splash:'启动图',photo:'截图'};
+  var PAGE_EN = {home:'HOME',bookshelf:'SHELF',bookshelfCategory:'COLLECTION',reader:'READER',statistics:'STATISTICS',profile:'PROFILE',splash:'SPLASH',photo:'PHOTO'};
+
+  function userGiven(it){
+    if(it.page === 'bookshelfCategory' && String(it.detail || '').trim()){
+      return String(it.detail).trim();
+    }
+    var lb = String(it.label || '').trim();
+    if(!lb) return '';
+    var defZh = PAGE_ZH[it.page] || '';
+    var defEn = PAGE_EN[it.page] || '';
+    if(lb === defZh || lb.toLowerCase() === defEn.toLowerCase()) return '';
+    return lb;
+  }
+
+  var userNames = P.shots.map(userGiven);
+  var anyCJK = userNames.some(function(n){ return n && hasCJK(n); })
+            || hasCJK(P.name) || hasCJK(P.desc) || hasCJK(P.author) || hasCJK(P.sharer);
+  var langMode = String((payload.params && payload.params.captionLang) || 'auto');
+  /* 图注一律中文：这是给中文用户做作品用的。
+     素材名（shot1 / IMG_001）不再影响语言判定。 */
+  var LABELS = (langMode === 'en') ? EN : ZH;
+
+  var capBase = P.shots.map(function(it){
+    var own = userGiven(it);
+    if(own) return own;
+    return LABELS[it.page] || '';
+  });
+
+  var capData = capBase.map(function(base, i){
+    var it = P.shots[i];
+    if(!base) return { base: '' };
+    if(!it) return { base: base };
+    if(!isMixed) return { base: base };
+    if(typeof it.darkMode !== 'boolean') return { base: base };
+    if(payload.params && payload.params.showDayNight === false) return { base: base };
+    // \uFE0E = 文本呈现变体选择符：强制走文字字形，别被系统 emoji 字体抢走
+    return { base: base, mark: it.darkMode ? '\u263E\uFE0E' : '\u2600\uFE0E' };
+  });
+
+  /* ---------- 截图渲染：分支 ---------- */
+  var trio = document.getElementById('trio');
+  // 展签式图注挂在 trio 之后（同级），innerHTML 清不到，必须显式移除，
+  // 否则从 3D 切回静态网格会残留一条展签
+  var staleCap = trio.parentNode.querySelector('.capbar3d');
+  if(staleCap) staleCap.parentNode.removeChild(staleCap);
+  trio.innerHTML = '';
+  ST.capNumEl = null;
+  ST.capNameEl = null;
+  ST.capRuleEl = null;
+
+  var PR = (payload && payload.params) ? payload.params : {};
+  /* 总开关决定有没有 3D；模式只在开关打开后生效 */
+  var use3D = toBoolP(PR.enable3D, false);
+
+  if(use3D){
+    // ===== 3D 展映 =====
+    build3DStage(trio, P, PR, capData, anyCJK);
+  } else {
+    // ===== 原静态网格 =====
+    ST.active = false;
+    trio.classList.remove('is-3d', 'no-3d');
+    trio.style.height = '';
+    trio.style.gridTemplateColumns = '';
+    trio.style.columnGap = '';
+
+    // 原有逻辑，逐字保留
+    var slotsDeclared = 3;
+    try{
+      var metaEl = document.querySelector('meta[name="reeden-template-screens"]');
+      if(metaEl) slotsDeclared = JSON.parse(metaEl.getAttribute('content')).length || 3;
+    }catch(e){}
+
+    var n = P.shots.length;
+    if(!n){
+      /* 一张截图都没有时，按模板声明的槽位数补空位 ——
+         写死 3 会导致六图版只显示 3 个空位。
+         同时给每个空位带上页面名，预览时能看出这一格是什么页面。 */
+      var slots = slotsDeclared || 6;
+      var _emptyPages = ['home','bookshelf','reader','statistics','profile','splash'];
+      for(var e2 = 0; e2 < slots; e2++){
+        P.shots.push({ empty:true, a:0.4739, page:_emptyPages[e2] || '' });
+      }
+      n = slots;
+    }
+
+    var trioEl = document.getElementById('trio');
+    var BOARD = (trioEl && trioEl.clientWidth > 40) ? trioEl.clientWidth : 454;
+    var a0 = P.shots[0].a || 0.4739;
+
+    var LAY = String((payload.params && payload.params.layoutStyle) || 'grid');
+    var COLS;
+    if(n === 4 && LAY === 'grid2') COLS = 2;          // 两行两格
+    else COLS = (n <= 4) ? n : (LAY === 'row6' ? n : 3);
+    if(trioEl) trioEl.style.setProperty('--cols', COLS);
+    var ROWS = Math.ceil(n / COLS);
+
+    var OFS = Number((payload.params && payload.params.offsetY) != null ? payload.params.offsetY : 30);
+    var offsets = [];
+    if(LAY === 'arch'){
+      /* 拱形：中间那张抬高、两侧下沉（三图），或中间两张抬高（四图） */
+      if(n === 3) offsets = [Math.round(OFS*0.6), 0, Math.round(OFS*0.6)];
+      else if(n === 4) offsets = [Math.round(OFS*0.55), 0, 0, Math.round(OFS*0.55)];
+      else offsets = [];
+    } else if(n >= 5 && LAY !== 'grid'){
+      for(var oi = 0; oi < n; oi++){
+        var colI = oi % COLS, rowI = Math.floor(oi / COLS);
+        var o = 0;
+        if(LAY === 'wave') o = (colI === 1) ? OFS : 0;
+        else if(LAY === 'scatter') o = [0, OFS, OFS*0.4, OFS*0.75, 0, OFS][oi] || 0;
+        if(rowI > 0) o += OFS * 0.35;
+        offsets.push(Math.round(o));
+      }
+    }
+    /* 预留高度按「实际最大偏移」算，而不是拍一个 OFS*1.4 的系数 ——
+       系数法在拱形这种偏移分布下会算多或算少。 */
+    var _ofsMax = 0;
+    for(var _k = 0; _k < offsets.length; _k++) if(offsets[_k] > _ofsMax) _ofsMax = offsets[_k];
+    var _ofsReserve = Math.round(_ofsMax);
+    var COLGAP = 12;
+    var CELL_H = ROWS > 1
+      ? Math.round((1000 - 192 - 24*(ROWS-1) - _ofsReserve*ROWS) / ROWS)
+      : 388 - _ofsReserve;
+    if(ROWS === 1 && COLS > 4){
+      var _wMax = (BOARD - COLGAP*(COLS-1)) / COLS;
+      CELL_H = Math.round(_wMax / (a0 || 0.4739));
+    }
+    if(_ofsReserve === 0 && ROWS > 1) CELL_H = Math.min(370, CELL_H);
+    if(trioEl) trioEl.style.columnGap = COLGAP + 'px';
+
+    var h = CELL_H;
+    var w1 = h * a0;
+    var maxW = (BOARD - COLGAP*(COLS-1)) / COLS;
+    if(w1 > maxW){ w1 = maxW; h = w1 / a0; }
+
+    P.shots.forEach(function(it, i){
+      var wrap = document.createElement('div');
+      wrap.style.width = '100%';
+      if(offsets.length && offsets[i]) wrap.style.marginTop = offsets[i] + 'px';
+      wrap.style.maxWidth = w1.toFixed(2) + 'px';
+      wrap.style.minWidth = '0';
+
+      var fig = document.createElement('div');
+      fig.className = 'shot';
+      fig.style.width = w1.toFixed(2) + 'px';
+      fig.style.height = h.toFixed(2) + 'px';
+
+      if(it.empty){
+        var ph = document.createElement('div');
+        ph.className = 'empty';
+        /* 空位显示「页面名 + 未选择」，比干巴巴的「未选择」更能提示这一格是什么 */
+        var _pn = PAGE_ZH[it.page] || PAGE_EN[it.page] || '';
+        var _lbl = document.createElement('span');
+        _lbl.className = 'empty-lbl';
+        _lbl.textContent = _pn || '未选择';
+        ph.appendChild(_lbl);
+        if(_pn){
+          var _sub = document.createElement('span');
+          _sub.className = 'empty-sub';
+          _sub.textContent = '未选择';
+          ph.appendChild(_sub);
+        }
+        fig.appendChild(ph);
+      } else {
+        var im = document.createElement('img');
+        im.alt = '';
+        im.src = it.src;
+        fig.appendChild(im);
+      }
+      wrap.appendChild(fig);
+
+      var cap = document.createElement('div');
+      cap.className = 'cap';
+      var em = document.createElement('em');
+      em.textContent = ['i','ii','iii','iv','v','vi'][i] || String(i+1);
+      cap.appendChild(em);
+      var cd = capData[i] || { base:'' };
+      if(anyCJK) cap.setAttribute('data-lang','zh');
+      if(cd.base){
+        var s = document.createElement('s');
+        s.textContent = cd.base;
+        if(cd.mark){
+          var mk = document.createElement('b');
+          mk.textContent = cd.mark;
+          s.appendChild(mk);
+        }
+        cap.appendChild(s);
+      }
+      wrap.appendChild(cap);
+      trio.appendChild(wrap);
+    });
+  }
+
+  /* ---------- 页脚 ---------- */
+  var fa = document.getElementById('footAuthor');
+  var foot = document.getElementById('foot');
+  /* 页脚：主题作者 + 分享者，两人都有就并排显示 */
+  var aWho = String(P.author || '').trim();
+  var sWho = String(P.sharer || '').trim();
+  var who;
+  if (aWho && sWho && aWho !== sWho) who = aWho + ' · ' + sWho;
+  else who = aWho || sWho || 'Reeden';
+  fa.textContent = who;
+  foot.style.display = '';
+
+  /* ---------- 模板参数（原样） ---------- */
+  var PR2 = (payload && payload.params) ? payload.params : {};
+  function pnum(k,d){ var v = Number(PR2[k]); return isFinite(v) ? v : d; }
+  document.documentElement.style.setProperty('--poster-r', pnum('posterRadius',10) + 'px');
+  document.documentElement.style.setProperty('--shot-r', pnum('shotRadius',4) + 'px');
+
+  var html = document.documentElement;
+  function flag(k,v){ html.setAttribute('data-param-' + k.replace(/[A-Z]/g,function(m){return '-'+m.toLowerCase();}), v?'true':'false'); }
+  flag('showDeco', PR2.showDeco !== false);
+  flag('showSeal', PR2.showSeal !== false);
+  flag('showBrowserChrome', PR2.showBrowserChrome !== false);
+  flag('showFooter', PR2.showFooter !== false);
+  flag('showCaptions', PR2.showCaptions !== false);
+  /* 描边三档：none / hair / paper（旧数据里是布尔值，true 按 hair 处理） */
+  var egRaw = String(PR2.edgeGroup == null ? (PR2.shotBorder == null ? 'def' : PR2.shotBorder) : PR2.edgeGroup);
+  var BORDERS = ['none','line','mat','glass'];
+  var bdMode = egRaw === 'def' ? 'none'
+             : (BORDERS.indexOf(egRaw) >= 0 ? egRaw
+             : (egRaw === 'true' ? 'mat' : (egRaw === 'false' ? 'none'
+             : (egRaw === 'thin' || egRaw === 'hair0' ? 'line'
+             : (egRaw === 'hair' || egRaw === 'hair2' || egRaw === 'paper' ? 'mat' : 'none')))));
+  html.setAttribute('data-param-shot-border', bdMode);
+  document.documentElement.style.setProperty('--bdw', clampN(pnum('borderWidth', 4), 2, 14) + 'px');
+  /* 边缘色：留空则自动 —— 沿用封签的做法，取主题强调色做低透明度玻璃，
+     浅色主题偏暖白、深色主题偏冷白，但都带一点主题的色相，不是纯灰白 */
+  var bdManual = String(PR2.borderColor || '').trim();
+  var bdAuto;
+  if(bdMode === 'glass'){
+    bdAuto = fade(P.accent, isDark ? 0.26 : 0.20);
+  } else if(bdMode === 'line'){
+    bdAuto = isDark ? 'rgba(255,255,255,.14)' : mix(P.ink, '#000000', 0.10);
+  } else {
+    bdAuto = isDark ? mix(P.accent, '#ffffff', 0.06) : mix(P.accent, '#ffffff', 0.94);
+  }
+  document.documentElement.style.setProperty('--bd', bdManual || bdAuto);
+  /* 自定义边缘：宽度 / 玻璃通透度 / 玻璃高光 / 投影柔度（关掉就用调好的默认） */
+  var ceOn = toBoolP(PR2.customEdge, false);
+  var gop = ceOn ? clampN(pnum('glassOpacity', 20), 6, 60) / 100 : 0.20;
+  var gsh = ceOn ? clampN(pnum('glassSheen', 55), 0, 100) / 100 : 0.55;
+  var sft = ceOn ? clampN(pnum('shadowSoft', 18), 0, 40) : 18;
+  document.documentElement.style.setProperty('--gop', gop.toFixed(3));
+  document.documentElement.style.setProperty('--gsheen', gsh.toFixed(3));
+  document.documentElement.style.setProperty('--shsoft', sft + 'px');
+  flag('cardReflect', PR2.cardReflect === true || PR2.cardReflect === 'true');
+
+  /* ---------- 水印与质感 ---------- */
+  applyWatermark(payload, P, isDark);
+  applyMask(payload);
+
+  /* ---------- 卡片投影强度 ---------- */
+  var shRaw = Number(PR2.cardShadow);
+  var sh = isFinite(shRaw) ? clampN(shRaw, 0, 100) / 100 : 0.55;
+  document.documentElement.style.setProperty('--card-sh', sh.toFixed(3));
+
+  /* ---------- 封签（原样） ---------- */
+  var st = sealStyle(P, P.deskBase || paper);
+  var seal = document.getElementById('seal');
+  seal.style.setProperty('--sealBg', st.bg);
+  seal.style.setProperty('--sealWho', st.who);
+  seal.style.setProperty('--sealNote', st.note);
+  var whoEl = document.getElementById('sealWho');
+  var whoTxt = P.sharer || 'Reeden';
+  var idxText = String(whoTxt).replace(/\s+/g, ' ') || 'Reeden';
+
+  function graphemes(str){
+    try{
+      if(typeof Intl !== 'undefined' && Intl.Segmenter){
+        var seg = new Intl.Segmenter('zh', { granularity:'grapheme' });
+        var out = []; var it = seg.segment(str);
+        for(var s of it){ out.push(s.segment); }
+        return out;
+      }
+    }catch(e){}
+    return Array.from(String(str));
+  }
+  var glyphs = graphemes(idxText);
+
+  function codeFlags(str){
+    var hasSymbol = false, hasText = false;
+    for(var i = 0; i < str.length; i++){
+      var c = str.charCodeAt(i);
+      var isSym =
+        (c >= 0x2600 && c <= 0x27BF) ||
+        (c >= 0x2B00 && c <= 0x2BFF) ||
+        (c >= 0x1F000 && c <= 0x1FAFF) ||
+        (c >= 0xD800 && c <= 0xDFFF) ||
+        c === 0xFE0F || c === 0x20E3;
+      var isRTL =
+        (c >= 0x0590 && c <= 0x08FF) ||
+        (c >= 0x0900 && c <= 0x0EFF);
+      if(isSym || isRTL) hasSymbol = true;
+      else if(c > 0x20) hasText = true;
+    }
+    return { sym:hasSymbol, txt:hasText };
+  }
+  var cf = codeFlags(idxText);
+  var horizontal = cf.sym && !cf.txt;
+  var PER_CHAR = 1.12;
+
+  var sealEl = document.getElementById('seal');
+  var posterEl = document.getElementById('poster');
+  var hdEl = document.querySelector('.hd');
+  var room = 300;
+  if(sealEl && posterEl && hdEl){
+    var pb = posterEl.getBoundingClientRect().bottom;
+    var sealBottom = pb - 46;
+    var limit = hdEl.getBoundingClientRect().bottom + 10;
+    room = Math.max(80, Math.round(sealBottom - limit));
+  }
+  var AVAIL = Math.max(60, room - 42);
+  if(sealEl) sealEl.style.setProperty('--sealMax', room + 'px');
+
+  var RESERVE = Math.min(room, 200);
+  var size = Math.min(8.4, RESERVE / (PER_CHAR * glyphs.length));
+  size = Math.max(5.6, Math.round(size * 10) / 10);
+
+  whoEl.textContent = idxText;
+  whoEl.style.fontSize = size + 'px';
+  if(horizontal){
+    whoEl.setAttribute('data-h', '1');
+    whoEl.innerHTML = '';
+    glyphs.forEach(function(g){
+      var cell = document.createElement('i');
+      cell.textContent = g;
+      whoEl.appendChild(cell);
+    });
+  } else {
+    whoEl.removeAttribute('data-h');
+    whoEl.textContent = idxText;
+  }
+}
+
+/* ============================================================
+   水印与质感
+   ============================================================ */
+function escXml(str){
+  return String(str == null ? '' : str).replace(/[<>&'"]/g, function(c){
+    return {'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c];
+  });
+}
+
+/* 斜向平铺水印：用 SVG 拼一块贴片，background-repeat 铺满整页。
+   比逐字摆 DOM 轻得多，而且缩放时文字不会糊。 */
+function wmPattern(text, color, opacity, fontStack, fontFace){
+  var t = escXml(text || '');
+  var fs = 9;
+  var w = 210, h = 64;
+  var ff = fontStack || '-apple-system,PingFang SC,sans-serif';
+  var faceRule = '';
+  if(fontFace && fontFace.data && fontFace.data.indexOf('data:') === 0){
+    ff = fontFace.family;
+    faceRule = '<style>@font-face{font-family:"' + fontFace.family + '";src:url("' + fontFace.data + '");}</style>';
+  }
+  var svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+      faceRule +
+      '<g transform="rotate(-24 ' + (w/2) + ' ' + (h/2) + ')" ' +
+        'font-family="' + escXml(ff) + '" font-size="' + fs + '" ' +
+        'font-weight="600" letter-spacing="1.6" fill="' + color + '" fill-opacity="' + opacity + '">' +
+        '<text x="4" y="' + (h*0.34) + '">' + t + '</text>' +
+        '<text x="' + (-w*0.36) + '" y="' + (h*0.84) + '">' + t + '</text>' +
+      '</g>' +
+    '</svg>';
+  // SVG 里不要用 # 开头颜色（会被当成 fragment）；也不要 url("...") 包引号 ——
+  // WebKit 对引号内 data URI 解析不稳。单引号 + 整体编码最稳。
+  return {
+    url: "url('data:image/svg+xml," + encodeURIComponent(svg) + "')",
+    size: w + 'px ' + h + 'px'
+  };
+}
+
+/* 水印字体：四档，不用让用户填字体名 */
+function wmFontStack(mode, P){
+  /* 中文优先，再兜底西文族名；移动端只有系统里装了的才会命中 */
+  if(mode === 'kai')   return '"Kaiti SC","STKaiti","KaiTi","楷体","Kaiti TC",serif';
+  if(mode === 'song')  return '"Songti SC","STSong","SimSun","Noto Serif CJK SC","Source Han Serif SC",serif';
+  if(mode === 'hei')   return '"PingFang SC","Heiti SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+  if(mode === 'yuan')  return '"Yuanti SC","YouYuan","HYQiHei","Hiragino Maru Gothic ProN",sans-serif';
+  if(mode === 'serif') return 'Georgia,"Songti SC","Times New Roman",serif';
+  if(mode === 'mono')  return '"SF Mono","IBM Plex Mono",Menlo,monospace';
+  if(mode === 'sans')  return '-apple-system,"PingFang SC",Helvetica,sans-serif';
+  // auto：跟随模板标题字体
+  var f = (P && P.font) ? P.font : '';
+  return f ? ('"' + f + '",Georgia,"Songti SC",serif') : 'Georgia,"Songti SC",serif';
+}
+
+/* 水印开关：新参数是 select（off/on），旧数据是 switch（布尔），两种都认 */
+function wmEnabled(PR){
+  if(!PR) return false;
+  var v = PR.watermark;
+  if(v === 'on' || v === true) return true;
+  if(v === 'off' || v === false) return false;
+  return toBoolP(PR.enableWatermark, false);
+}
+
+function applyWatermark(payload, P, isDark){
+  var PR = (payload && payload.params) || {};
+  var el = document.getElementById('wm');
+  if(!el) return;
+
+  var on = wmEnabled(PR);
+  el.style.display = on ? '' : 'none';
+  // Use standard background properties instead of a CSS custom property:
+  // Chromium/WebKit silently reject setProperty() on --wm-image once the value
+  // passes a few MB (a large embedded watermark font makes the SVG data URI
+  // huge), leaving the previous image behind. Direct style properties accept
+  // large data URIs, so replacing the value always takes effect.
+  if(!on){ el.style.backgroundImage=''; el.style.backgroundSize=''; return; }
+
+  /* 默认文字：主题名 @分享者
+     注意取的是「分享者」(profile.nickname)，不是主题作者(theme.author) */
+  var custom = String(PR.watermarkText || '').trim();
+  var who = '';
+  if(custom){
+    who = custom;
+  } else {
+    var tName = String(P.name || '').trim();
+    var sharer = String(P.sharer || '').trim();
+    if(tName && sharer) who = tName + ' @' + sharer;
+    else if(sharer) who = '@' + sharer;
+    else who = tName || 'Reeden';
+  }
+
+  var opRaw = Number(PR.watermarkOpacity);
+  var op = isFinite(opRaw) ? clampN(opRaw, 4, 40) / 100 : 0.12;
+
+  var fontMode = String(PR.watermarkFont || 'auto');
+  var stack = wmFontStack(fontMode, P);
+  /* 自定义水印字体：SVG 水印是隔离文档，读不到页面 @font-face，
+     因此把字体 data URL 直接内嵌进 SVG；「跟随模板标题」对自定义标题字体同样生效。 */
+  var fontFace = null;
+  var wmFontData = String(PR.watermarkFontFile || '').trim();
+  if(wmFontData.indexOf('data:') === 0){
+    fontFace = { family: 'LiubaiWmCustom', data: wmFontData };
+  } else if(fontMode === 'auto'){
+    var titleData = String(PR.titleFont || '').trim();
+    if(titleData.indexOf('data:') === 0) fontFace = { family: 'LiubaiWmCustom', data: titleData };
+  }
+
+  /* 图片水印优先：上传的图片平铺整页，浓度用 CSS opacity 表达 */
+  var imgData = String(PR.watermarkImage || '').trim();
+  if(imgData && imgData.indexOf('data:image/') === 0){
+    var scaleRaw = Number(PR.watermarkImageScale);
+    var pct = isFinite(scaleRaw) ? clampN(scaleRaw, 20, 300) : 100;
+    var tile = Math.round(210 * pct / 100);
+    el.style.backgroundImage = "url('" + imgData + "')";
+    el.style.backgroundSize = tile + 'px auto';
+    el.style.opacity = op.toFixed(3);
+    return;
+  }
+  el.style.opacity = '';
+  var pat = wmPattern(who, isDark ? '#FFFFFF' : '#000000', op.toFixed(3), stack, fontFace);
+  el.style.backgroundImage = pat.url;
+  el.style.backgroundSize = pat.size;
+}
+
+/* 截图质感：一个强度值自动映射到 模糊 / 纹理密度 / 叠加强度，
+   用户不需要分别理解四个滑块在干什么。 */
+function applyMask(payload){
+  var PR = (payload && payload.params) || {};
+  var style = String(PR.maskStyle || 'none');
+  var VALID = {frost:1, halftone:1, engrave:1, linen:1, grain:1, stipple:1, crosshatch:1};
+  if(!VALID[style]) style = 'none';
+
+  var kRaw = Number(PR.maskStrength);
+  var k = isFinite(kRaw) ? clampN(kRaw, 0, 100) / 100 : 0.45;
+
+  var root = document.documentElement;
+  root.setAttribute('data-param-mask-style', style);
+  if(style === 'none') return;
+
+  if(style === 'frost'){
+    // 只柔化：0→0.6px，100→6px
+    root.style.setProperty('--mask-blur', (0.6 + k * 5.4).toFixed(2) + 'px');
+
+  } else if(style === 'halftone'){
+    root.style.setProperty('--mask-blur', (0.2 + k * 0.9).toFixed(2) + 'px');
+    root.style.setProperty('--mask-cell', (2.2 + (1 - k) * 2.2).toFixed(2) + 'px');
+    root.style.setProperty('--mask-op', (0.16 + k * 0.62).toFixed(3));
+
+  } else if(style === 'engrave'){
+    root.style.setProperty('--mask-blur', (0.3 + k * 1.1).toFixed(2) + 'px');
+    root.style.setProperty('--mask-gap', (3.6 - k * 1.4).toFixed(2) + 'px');
+    root.style.setProperty('--mask-op', (0.14 + k * 0.60).toFixed(3));
+
+  } else if(style === 'linen'){
+    // 布纹：线距随强度收紧，叠加加深
+    root.style.setProperty('--mask-blur', (0.3 + k * 0.9).toFixed(2) + 'px');
+    root.style.setProperty('--mask-gap', (4.2 - k * 1.6).toFixed(2) + 'px');
+    root.style.setProperty('--mask-op', (0.14 + k * 0.54).toFixed(3));
+
+  } else if(style === 'grain'){
+    // 颗粒：噪点贴片 + overlay，强度越高颗粒越明显
+    root.style.setProperty('--mask-blur', (0.15 + k * 0.7).toFixed(2) + 'px');
+    root.style.setProperty('--mask-cell', (170 - k * 70).toFixed(0) + 'px');
+    root.style.setProperty('--mask-op', (0.12 + k * 0.42).toFixed(3));
+    root.style.setProperty('--mask-noise', grainNoiseUrl());
+
+  } else if(style === 'stipple'){
+    // 点刻：点距收紧 + 叠加加深
+    root.style.setProperty('--mask-blur', (0.3 + k * 0.9).toFixed(2) + 'px');
+    root.style.setProperty('--mask-cell', (7.5 - k * 3.0).toFixed(2) + 'px');
+    root.style.setProperty('--mask-op', (0.16 + k * 0.52).toFixed(3));
+
+  } else {
+    // crosshatch：排线间距收紧
+    root.style.setProperty('--mask-blur', (0.2 + k * 0.9).toFixed(2) + 'px');
+    root.style.setProperty('--mask-gap', (5.2 - k * 2.2).toFixed(2) + 'px');
+    root.style.setProperty('--mask-op', (0.14 + k * 0.54).toFixed(3));
+  }
+}
+
+/* 胶片颗粒：用 feTurbulence 生成一张噪点贴片，比叠多层径向渐变更像真噪点。
+   只生成一次，缓存在变量里，重渲染不重复构造。 */
+var __grainUrl = null;
+function grainNoiseUrl(){
+  if(__grainUrl) return __grainUrl;
+  var svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160">' +
+      '<filter id="n">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>' +
+        '<feColorMatrix type="saturate" values="0"/>' +
+      '</filter>' +
+      '<rect width="160" height="160" filter="url(#n)" opacity="0.9"/>' +
+    '</svg>';
+  __grainUrl = "url('data:image/svg+xml," + encodeURIComponent(svg) + "')";
+  return __grainUrl;
+}
+
+/* ============================================================
+   对外接口
+   ============================================================ */
+window.ReedenShareTemplate = {
+  render: function(payload){
+    try{ render(payload); }
+    catch(e){
+      var p = document.getElementById('poster');
+      if(p && !p.textContent.trim()) p.textContent = '主题预览';
+    }
+  },
+  seekAnimation: seekAnimation
+};
+
+window.Reeden = window.Reeden || {};
+window.Reeden.seekAnimation = seekAnimation;
+window.Reeden.render = window.ReedenShareTemplate.render;
+
+var __payload = window.__REEDEN_SHARE_PAYLOAD__ || window.__REEDEN_MOCK__ || {};
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', function(){ window.ReedenShareTemplate.render(__payload); });
+} else {
+  window.ReedenShareTemplate.render(__payload);
+}
+
+/* ready 信号：选择器改为 .trio img，兼顾静态/3D */
+(function(){
+  var fired = false;
+  var send = function(){
+    if(fired) return;
+    fired = true;
+    document.documentElement.setAttribute('data-reeden-ready','1');
+  };
+  var imgs = [].slice.call(document.querySelectorAll('.trio img'));
+  var pending = imgs.length;
+  if(!pending){ send(); }
+  else {
+    imgs.forEach(function(im){
+      var done = function(){
+        pending--;
+        if(pending <= 0) send();
+      };
+      if(im.complete && im.naturalWidth > 0) done();
+      else{
+        im.addEventListener('load', done, { once:true });
+        im.addEventListener('error', done, { once:true });
+      }
+    });
+    setTimeout(send, 2500);
+  }
+})();
+})();
+</script>
+
+</body></html>
