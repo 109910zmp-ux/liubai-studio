@@ -17,7 +17,8 @@ export function ColorSection({ studio }: { studio: StudioApi }) {
           onChange={(event) => studio.setJsonRaw(event.target.value)}
           onPaste={(event) => {
             const value = event.clipboardData.getData("text")
-            setTimeout(() => actions.applyJson(value), 60)
+            studio.setJsonRaw(value)
+            actions.applyJson(value)
           }}
           rows={3}
           className="min-h-20 resize-y font-mono"

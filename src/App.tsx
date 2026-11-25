@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
   CircleHelpIcon,
@@ -27,7 +27,7 @@ import { useUiTheme } from "@/hooks/useUiTheme"
 import type { UiTheme } from "@/hooks/useUiTheme"
 import { CAPTION_PRESETS } from "@/lib/constants"
 import type { TemplateParam, Tone } from "@/lib/types"
-import { cx } from "@/lib/utils"
+import { cn } from "cn"
 import { AssetsSection } from "./components/studio/assets-section"
 import { ColorPickerDialog } from "./components/studio/color-picker-dialog"
 import { ColorSection } from "./components/studio/color-section"
@@ -94,6 +94,14 @@ function Studio() {
   const uiTheme = useUiTheme()
   const [helpOpen, setHelpOpen] = useState(false)
   const [resetArmed, setResetArmed] = useState(false)
+  const resetTimer = useRef<number | undefined>(undefined)
+  const disarmReset = () => {
+    if (resetTimer.current !== undefined) {
+      window.clearTimeout(resetTimer.current)
+      resetTimer.current = undefined
+    }
+    setResetArmed(false)
+  }
   const { refs, actions } = studio
 
   const groupedParams = useMemo<ParamGroup[]>(() => {
@@ -110,8 +118,10 @@ function Studio() {
     return groups
   }, [studio.currentTpl, studio.params])
 
-  const brandIcon =
-    document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? undefined
+  const brandIcon = useMemo(() => {
+    const href = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href
+    return href || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
+  }, [])
 
   return (
     <div className="relative flex h-full flex-col">
@@ -290,7 +300,7 @@ function Studio() {
         <>
           <div
             ref={refs.floatWin}
-            className={cx(
+            className={cn(
               "float-window",
               studio.floatOpen && "on",
               studio.floatMin && "min",
@@ -361,7 +371,13 @@ function Studio() {
         {CAPTION_PRESETS.map((item) => <option key={item} value={item} />)}
       </datalist>
 
-      <Dialog open={studio.projectOpen} onOpenChange={studio.setProjectOpen}>
+      <Dialog
+        open={studio.projectOpen}
+        onOpenChange={(open) => {
+          if (!open) disarmReset()
+          studio.setProjectOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>项目文件</DialogTitle>
@@ -384,12 +400,15 @@ function Studio() {
               onClick={() => {
                 if (resetArmed) {
                   void actions.resetAll().then(() => {
-                    setResetArmed(false)
+                    disarmReset()
                     studio.setProjectOpen(false)
                   })
                 } else {
                   setResetArmed(true)
-                  window.setTimeout(() => setResetArmed(false), 4000)
+                  resetTimer.current = window.setTimeout(() => {
+                    resetTimer.current = undefined
+                    setResetArmed(false)
+                  }, 4000)
                 }
               }}
             >

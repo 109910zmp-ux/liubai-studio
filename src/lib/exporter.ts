@@ -10,8 +10,21 @@ interface CaptureInfo {
   height: number
 }
 
+// Simple bounded cache: evict the oldest entry once the limit is reached.
+// Both caches grow with every imported image / parameter change and were
+// previously unbounded, so long editing sessions could retain tens of MB.
+function cacheSet<T>(cache: Map<string, T>, key: string, value: T, limit: number) {
+  cache.delete(key)
+  cache.set(key, value)
+  if (cache.size > limit) {
+    const oldest = cache.keys().next().value
+    if (oldest !== undefined) cache.delete(oldest)
+  }
+}
+
 const smallCache = new Map<string, string>()
 const captureCache = new Map<string, { css: string; vars: string }>()
+const CACHE_LIMIT = 50
 
 // WebKit's SVG rasterizer does not reliably evaluate nested calc()/var()
 // inside box-shadow and gradients: the blur collapses to zero and leaves hard
@@ -116,6 +129,82 @@ function inlineComputedLedgeStyles(live: Element, clone: HTMLElement) {
   })
 }
 
+// Evaluate a simple arithmetic expression (+ - * /, parentheses, decimals)
+// without Function(), so exporting still works under a strict CSP that
+// forbids unsafe-eval. Returns null for anything it cannot parse.
+function evalArithmetic(input: string): number | null {
+  const text = input.replace(/\s+/g, "")
+  if (!text || !/^[\d.+\-*/()]+$/.test(text)) return null
+  let pos = 0
+  const peek = () => text.charAt(pos)
+  function primary(): number {
+    let sign = 1
+    while (peek() === "+" || peek() === "-") {
+      if (text.charAt(pos++) === "-") sign = -sign
+    }
+    if (peek() === "(") {
+      pos++
+      const value = expression()
+      if (peek() !== ")") throw new Error("unbalanced")
+      pos++
+      return sign * value
+    }
+    const start = pos
+    while (/[\d.]/.test(peek()) && peek() !== "") pos++
+    if (start === pos) throw new Error("number expected")
+    const value = Number(text.slice(start, pos))
+    if (!Number.isFinite(value)) throw new Error("invalid number")
+    return sign * value
+  }
+  function term(): number {
+    let value = primary()
+    while (peek() === "*" || peek() === "/") {
+      const op = text.charAt(pos++)
+      const right = primary()
+      value = op === "*" ? value * right : right === 0 ? NaN : value / right
+    }
+    return value
+  }
+  function expression(): number {
+    let value = term()
+    while (peek() === "+" || peek() === "-") {
+      const op = text.charAt(pos++)
+      const right = term()
+      value = op === "+" ? value + right : value - right
+    }
+    return value
+  }
+  try {
+    const value = expression()
+    return pos === text.length && Number.isFinite(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+// Wait for the browser to commit style/layout changes to the iframe before
+// cloning it. rAF is precise and adapts to refresh rate; the timeout fallback
+// keeps background tabs from stalling (rAF is throttled there) so long exports
+// still finish — a regression seen earlier with headless/background recording.
+function afterPaint(frames: number, fallbackMs: number) {
+  return new Promise<void>((resolve) => {
+    let remaining = frames
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      resolve()
+    }
+    const tick = () => {
+      remaining -= 1
+      if (remaining <= 0) finish()
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+    setTimeout(finish, fallbackMs)
+  })
+}
+
 function resolveCssCalc(css: string, root: HTMLElement, source?: HTMLElement) {
   const computed = getComputedStyle(root)
   // Font/ink variables (--title, --sans, --mono, ...) live on the poster
@@ -159,22 +248,22 @@ function resolveCssCalc(css: string, root: HTMLElement, source?: HTMLElement) {
     if (hasPx && hasPercent) return all
     const unit = hasPx ? "px" : hasPercent ? "%" : ""
     const numeric = inner.replace(/px|%/g, "")
-    if (!/^[\d.+\-*/ ]+$/.test(numeric)) return all
-    try {
-      const value = Function(`"use strict";return (${numeric})`)() as number
-      if (!Number.isFinite(value)) return all
-      return `${Number(value.toFixed(3))}${unit}`
-    } catch {
-      return all
-    }
+    const value = evalArithmetic(numeric)
+    if (value == null) return all
+    return `${Number(value.toFixed(3))}${unit}`
   })
 }
 
 export function exportName(title: string, suffix: string) {
-  const base =
-    title.trim() ||
-    "留白"
-  return `${base.replace(/[\\/:*?"<>|\n\r\t]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60)}${suffix}`
+  const WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
+  let base = (title.trim() || "留白")
+    .replace(/[\\/:*?"<>|\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60)
+    .replace(/[. ]+$/g, "")
+  if (!base || WINDOWS_RESERVED.test(base)) base = `_${base || "留白"}`
+  return `${base}${suffix}`
 }
 
 export function downloadBlob(blob: Blob, name: string) {
@@ -183,11 +272,25 @@ export function downloadBlob(blob: Blob, name: string) {
   anchor.href = url
   anchor.download = name
   anchor.click()
-  setTimeout(() => URL.revokeObjectURL(url), 4000)
+  // Large MP4/ZIP downloads on Safari or slow disks can take well over 4s to
+  // start reading the blob; revoke late enough not to cut the download short.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+// FNV-1a over the base64 payload. Using data.length alone as the cache key
+// collides whenever two different images happen to encode to the same length,
+// which silently swaps one shot's thumbnail for another during video export.
+function hashData(data: string) {
+  let hash = 2166136261
+  for (let i = 0; i < data.length; i++) {
+    hash ^= data.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 export function smallImage(data: string, maxWidth: number) {
-  const key = `${data.length}_${maxWidth}`
+  const key = `${hashData(data)}_${data.length}_${maxWidth}`
   const cached = smallCache.get(key)
   if (cached) return Promise.resolve(cached)
   return new Promise<string>((resolve) => {
@@ -202,7 +305,7 @@ export function smallImage(data: string, maxWidth: number) {
       canvas.height = height
       canvas.getContext("2d")?.drawImage(image, 0, 0, width, height)
       const output = canvas.toDataURL("image/jpeg", 0.82)
-      smallCache.set(key, output)
+      cacheSet(smallCache, key, output, CACHE_LIMIT)
       resolve(output)
     }
     image.onerror = () => {
@@ -354,7 +457,7 @@ function cloneCaptureNode(
       css += `${style.textContent}\n`
     })
     cache = { css: resolveCssCalc(css, root, target as HTMLElement), vars: root.getAttribute("style") || "" }
-    captureCache.set(cacheKey, cache)
+    cacheSet(captureCache, cacheKey, cache, CACHE_LIMIT)
   }
 
   // Keep the capture tree in a detached shadow root. Template styles must never
@@ -450,7 +553,6 @@ interface PngOptions extends ExportCallbacks {
   templateKey: string
   title: string
   targetWidth: number
-  buildPayload: () => StudioPayload
   renderNow: () => void
   hasShots: boolean
 }
@@ -483,13 +585,12 @@ async function capturePngBlob(
 }
 
 export async function exportPng(options: PngOptions) {
-  const { preview, templateKey, title, targetWidth, buildPayload, renderNow, hasShots } = options
+  const { preview, templateKey, title, targetWidth, renderNow, hasShots } = options
   if (!preview) throw new Error("预览未就绪")
   if (!hasShots) throw new Error("先添加素材")
 
   options.setStatus("正在渲染…")
   options.setProgress(0.2)
-  void buildPayload()
   const { blob, width, height } = await capturePngBlob(preview, templateKey, targetWidth, renderNow)
   downloadBlob(blob, exportName(title, ".png"))
   options.setStatus(`PNG 已导出：${width} × ${height}`)
@@ -543,7 +644,7 @@ export async function exportBatchZip(options: BatchOptions) {
         // renderGroup pushes the batch payload into the iframe; pass a no-op to
         // cloneCaptureNode because the DOM is already showing this batch.
         renderGroup(group)
-        await new Promise((resolve) => setTimeout(resolve, 60))
+        await afterPaint(2, 60)
         const { blob } = await capturePngBlob(preview, template.key, targetWidth, () => {})
         files.push({ name: exportName(title, `${suffix}.png`), data: blob })
         pngCount += 1
@@ -636,7 +737,7 @@ async function recordVideoOnce(
   }
 
   win.ReedenShareTemplate.render(options.buildPayload(true, used))
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  await afterPaint(2, 300)
 
   let info: CaptureInfo | null = null
   try {
@@ -766,7 +867,7 @@ async function recordVideoOnce(
         const progress = index / (total - 1 || 1)
         win.Reeden!.seekAnimation!(progress)
         // Let the template commit its animation state before cloning.
-        await new Promise((resolve) => setTimeout(resolve, 16))
+        await afterPaint(1, 16)
         frame = cloneCaptureNode(preview, template.key, () => {})
         const svg = serializeToSvg(frame.el, frame.width, frame.height)
         try {

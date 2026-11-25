@@ -62,25 +62,49 @@ function safeInsets() {
   }
 }
 
-function readImage(file: File, nextId: () => string) {
-  return new Promise<Shot | null>((resolve) => {
+interface ReadImageResult {
+  shot: Shot | null
+  error?: string
+}
+
+function makeThumbnail(image: HTMLImageElement, maxWidth = 128) {
+  const width = Math.min(maxWidth, image.naturalWidth || maxWidth)
+  const height = Math.max(1, Math.round((image.naturalHeight || maxWidth) * (width / (image.naturalWidth || maxWidth))))
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+  canvas.getContext("2d")?.drawImage(image, 0, 0, width, height)
+  return canvas.toDataURL("image/jpeg", 0.8)
+}
+
+function readImage(file: File, nextId: () => string): Promise<ReadImageResult> {
+  return new Promise((resolve) => {
+    const isHeic = /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)
     const reader = new FileReader()
     reader.onload = () => {
       const image = new Image()
       image.onload = () => {
         resolve({
-          id: nextId(),
-          data: String(reader.result),
-          width: image.naturalWidth,
-          height: image.naturalHeight,
-          label: file.name.replace(/\.[^.]+$/, ""),
-          page: "photo",
+          shot: {
+            id: nextId(),
+            data: String(reader.result),
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+            label: file.name.replace(/\.[^.]+$/, ""),
+            page: "photo",
+            thumb: makeThumbnail(image),
+          },
         })
       }
-      image.onerror = () => resolve(null)
+      image.onerror = () => resolve({
+        shot: null,
+        error: isHeic
+          ? `${file.name}：当前浏览器无法解码 HEIC，请先转换为 JPG / PNG`
+          : `${file.name}：无法解码该图片`,
+      })
       image.src = String(reader.result)
     }
-    reader.onerror = () => resolve(null)
+    reader.onerror = () => resolve({ shot: null, error: `${file.name}：读取失败` })
     reader.readAsDataURL(file)
   })
 }
@@ -793,14 +817,17 @@ export function useStudio() {
       return
     }
     const loaded: Shot[] = []
+    const errors: string[] = []
     for (const file of files) {
-      const shot = await readImage(file, nextId)
-      if (shot) loaded.push(shot)
+      const result = await readImage(file, nextId)
+      if (result.shot) loaded.push(result.shot)
+      if (result.error) errors.push(result.error)
     }
     if (!loaded.length) {
-      notify("没有可用的图片")
+      notify(errors[0] ?? "没有可用的图片")
       return
     }
+    if (errors.length) notify(errors[0])
     recordDiscrete()
     const next = [...shotsRef.current, ...loaded]
     commitShots(next)
@@ -1039,7 +1066,6 @@ export function useStudio() {
         templateKey: currentTpl?.key ?? "",
         title: name,
         targetWidth: pngWidth,
-        buildPayload: () => makePayload(),
         renderNow: pushPreview,
         hasShots: shots.length > 0,
         setProgress,

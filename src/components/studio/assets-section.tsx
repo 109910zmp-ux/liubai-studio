@@ -1,14 +1,15 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { StudioApi } from "@/hooks/useStudio"
 import { PAGE_OPTIONS } from "@/lib/constants"
-import { cx } from "@/lib/utils"
+import { cn } from "cn"
 
 export function AssetsSection({ studio }: { studio: StudioApi }) {
   const { actions, refs } = studio
   const [hot, setHot] = useState(false)
+  const dragDepth = useRef(0)
   return (
     <div className="space-y-3">
       <button
@@ -16,19 +17,26 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
         className="drop-zone px-4 py-5 text-center"
         data-hot={hot}
         onClick={() => refs.fileInput.current?.click()}
-        onDragOver={(event) => {
+        onDragEnter={(event) => {
           event.preventDefault()
+          dragDepth.current += 1
           setHot(true)
         }}
-        onDragLeave={() => setHot(false)}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={(event) => {
+          event.preventDefault()
+          dragDepth.current = Math.max(0, dragDepth.current - 1)
+          if (dragDepth.current === 0) setHot(false)
+        }}
         onDrop={(event) => {
           event.preventDefault()
+          dragDepth.current = 0
           setHot(false)
           void actions.addFiles(event.dataTransfer.files)
         }}
       >
         <div className="text-sm font-medium">拖入图片，或点击选择</div>
-        <div className="hint-text mt-1">支持多张 · PNG / JPG / WEBP / HEIC</div>
+        <div className="hint-text mt-1">支持多张 · PNG / JPG / WEBP（HEIC 请先转为 JPG）</div>
       </button>
       <input
         ref={refs.fileInput}
@@ -56,7 +64,7 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
           >
             <div className="relative">
               <img
-                src={shot.data}
+                src={shot.thumb ?? shot.data}
                 alt=""
                 className="size-16 rounded-md bg-muted object-cover"
               />
@@ -113,7 +121,7 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
                   <button
                     key={option.key}
                     type="button"
-                    className={cx(
+                    className={cn(
                       "page-chip",
                       studio.shotPage(shot, index) === option.key && "on",
                     )}

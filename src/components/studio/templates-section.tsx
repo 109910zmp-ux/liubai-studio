@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import type { StudioApi } from "@/hooks/useStudio"
-import { cx } from "@/lib/utils"
+import { cn } from "cn"
 
 export function TemplatesSection({ studio }: { studio: StudioApi }) {
   const { actions } = studio
@@ -16,7 +16,7 @@ export function TemplatesSection({ studio }: { studio: StudioApi }) {
               type="button"
               variant="outline"
               size="lg"
-              className={cx("tpl-card h-auto flex-col items-start gap-0 p-3 text-left", active && "border-primary bg-accent")}
+              className={cn("tpl-card h-auto flex-col items-start gap-0 p-3 text-left", active && "border-primary bg-accent")}
               data-active={active}
               onClick={() => {
                 if (extra > 0) {
@@ -28,7 +28,7 @@ export function TemplatesSection({ studio }: { studio: StudioApi }) {
               }}
             >
               <span className="text-sm font-semibold">{template.count} 图</span>
-              <span className={cx("mt-0.5 text-xs", extra > 0 ? "text-destructive" : "text-muted-foreground")}>
+              <span className={cn("mt-0.5 text-xs", extra > 0 ? "text-destructive" : "text-muted-foreground")}>
                 {extra > 0 ? `用 ${template.count} / ${studio.shots.length}` : `${template.count} 个位置`}
               </span>
             </Button>

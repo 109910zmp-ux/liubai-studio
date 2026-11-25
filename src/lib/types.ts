@@ -44,6 +44,7 @@ export interface Shot {
   isDark?: boolean
   darkMode?: boolean
   small?: string
+  thumb?: string
 }
 
 export type ParamValues = Record<string, string | number | boolean>

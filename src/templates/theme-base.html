@@ -2,10 +2,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=640">
 <meta name="reeden-template-version" content="1">
-<meta name="reeden-template-name" content="留白 · 6图">
+<meta name="reeden-template-name" content="__REEDEN_TITLE__">
 <meta name="reeden-template-type" content="themePreview">
 <meta name="reeden-template-width" content="640">
-<meta name="reeden-template-screens" content="[{&quot;id&quot;: &quot;d0&quot;, &quot;label&quot;: &quot;Home&quot;, &quot;page&quot;: &quot;home&quot;}, {&quot;id&quot;: &quot;d1&quot;, &quot;label&quot;: &quot;Shelf&quot;, &quot;page&quot;: &quot;bookshelf&quot;}, {&quot;id&quot;: &quot;d2&quot;, &quot;label&quot;: &quot;Reader&quot;, &quot;page&quot;: &quot;reader&quot;}, {&quot;id&quot;: &quot;d3&quot;, &quot;label&quot;: &quot;Stats&quot;, &quot;page&quot;: &quot;statistics&quot;}, {&quot;id&quot;: &quot;d4&quot;, &quot;label&quot;: &quot;Profile&quot;, &quot;page&quot;: &quot;profile&quot;}, {&quot;id&quot;: &quot;d5&quot;, &quot;label&quot;: &quot;Splash&quot;, &quot;page&quot;: &quot;splash&quot;}]">
+<meta name="reeden-template-screens" content="__REEDEN_SCREENS__">
 <!-- ============================================================
      来源说明
      ------------------------------------------------------------
@@ -94,7 +94,7 @@
 <meta data-red-param="param.offsetY" data-red-type="range" data-red-label="错落幅度" data-red-min="0" data-red-max="60" data-red-step="4" data-red-default="30" data-red-group="图文排版" data-red-when="param.layoutStyle=wave|scatter">
 <meta data-red-param="param.captionLang" data-red-type="select" data-red-label="图注语言" data-red-options="auto:自动（跟随你的命名）,en:英文,zh:中文" data-red-default="auto" data-red-group="图文排版">
 <meta data-red-param="param.showDayNight" data-red-type="switch" data-red-label="混搭时标注日夜" data-red-default="true" data-red-group="图文排版" data-red-when="param.showCaptions">
-<title>留白 · 6图</title>
+<title>__REEDEN_TITLE__</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{margin:0;padding:0;background:transparent}
@@ -1738,6 +1738,11 @@ function phase3D(p,n){
 function start3DLoop(){
   if(ST.raf) cancelAnimationFrame(ST.raf);
   ST.lastTs = 0;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    ST.playing = false;
+    render3D(phase3D(ST.p, ST.n));
+    return;
+  }
   ST.raf = requestAnimationFrame(loop3D);
 }
 function stop3DLoop(){

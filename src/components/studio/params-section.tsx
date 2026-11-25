@@ -15,7 +15,7 @@ import type { StudioApi } from "@/hooks/useStudio"
 import { hexNorm } from "@/lib/color"
 import { STYLE_PRESETS } from "@/lib/presets"
 import type { TemplateParam } from "@/lib/types"
-import { cx } from "@/lib/utils"
+import { cn } from "cn"
 
 // Core groups stay open; fine-tuning groups start collapsed to cut down the
 // 44-control wall. Users can still expand anything, and the choice persists.
@@ -150,7 +150,7 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
           <div key={group.name}>
             <button
               type="button"
-              className={cx(
+              className={cn(
                 "flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs font-medium",
                 "hover:bg-muted/60 transition-colors",
               )}

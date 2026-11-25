@@ -33,13 +33,21 @@ export function ColorPickerDialog({
   const [value, setValue] = useState(1)
   const [opacity, setOpacity] = useState(1)
   const [hexInput, setHexInput] = useState(color)
-  const areaRef = useRef<HTMLDivElement>(null)
-  const hueRef = useRef<HTMLDivElement>(null)
-  const alphaRef = useRef<HTMLDivElement>(null)
   const dragging = useRef<"area" | "hue" | "alpha" | null>(null)
+  const syncedKey = useRef<string | null>(null)
 
+  // Sync external colour only when the dialog opens or a different colour is
+  // picked. Re-syncing on every `color` change would feed the 8-bit HEX back
+  // into HSV mid-drag and make the cursor jump.
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      syncedKey.current = null
+      dragging.current = null
+      return
+    }
+    const key = String(colorKey)
+    if (syncedKey.current === key) return
+    syncedKey.current = key
     const channels = rgb(color)
     const [h, s, v] = rgbToHsv(channels[0], channels[1], channels[2])
     setHue(h)
@@ -47,7 +55,9 @@ export function ColorPickerDialog({
     setValue(v)
     setOpacity(alpha)
     setHexInput(color.toUpperCase())
-  }, [open, color, alpha])
+    // colour / alpha are read at open time on purpose, not tracked mid-drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, colorKey])
 
   const channels = hsvToRgb(hue, saturation, value)
   const hex = hx(channels[0], channels[1], channels[2])
@@ -66,9 +76,11 @@ export function ColorPickerDialog({
     onChange(colorKey, nextHex, nextAlpha)
   }
 
-  function bindArea(
+  // One handler for pointer-down and pointer-move across all three controls.
+  function updateFromPointer(
     kind: "area" | "hue" | "alpha",
     event: ReactPointerEvent<HTMLDivElement>,
+    start: boolean,
   ) {
     const element = event.currentTarget
     const rect = element.getBoundingClientRect()
@@ -90,35 +102,21 @@ export function ColorPickerDialog({
       nextAlpha = x
       setOpacity(x)
     }
-    dragging.current = kind
-    emitColor(nextHue, nextSaturation, nextValue, nextAlpha)
-    element.setPointerCapture?.(event.pointerId)
-    event.preventDefault()
-  }
-
-  function moveArea(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragging.current) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = clamp((event.clientX - rect.left) / rect.width, 0, 1)
-    const y = clamp((event.clientY - rect.top) / rect.height, 0, 1)
-    let nextHue = hue
-    let nextSaturation = saturation
-    let nextValue = value
-    let nextAlpha = opacity
-    if (dragging.current === "area") {
-      nextSaturation = x
-      nextValue = 1 - y
-      setSaturation(x)
-      setValue(1 - y)
-    } else if (dragging.current === "hue") {
-      nextHue = x * 360
-      setHue(nextHue)
-    } else {
-      nextAlpha = x
-      setOpacity(x)
+    if (start) {
+      dragging.current = kind
+      element.setPointerCapture?.(event.pointerId)
     }
     emitColor(nextHue, nextSaturation, nextValue, nextAlpha)
     event.preventDefault()
+  }
+
+  const stopDrag = () => { dragging.current = null }
+  const onMove = (kind: "area" | "hue" | "alpha") => (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== kind) return
+    updateFromPointer(kind, event, false)
+  }
+  const onDown = (kind: "area" | "hue" | "alpha") => (event: ReactPointerEvent<HTMLDivElement>) => {
+    updateFromPointer(kind, event, true)
   }
 
   return (
@@ -128,13 +126,12 @@ export function ColorPickerDialog({
           <DialogTitle>选择颜色</DialogTitle>
         </DialogHeader>
         <div
-          ref={areaRef}
           className="picker-area mt-4"
           style={{ background: `hsl(${hue.toFixed(1)},100%,50%)` }}
-          onPointerDown={(event) => bindArea("area", event)}
-          onPointerMove={moveArea}
-          onPointerUp={() => (dragging.current = null)}
-          onPointerCancel={() => (dragging.current = null)}
+          onPointerDown={onDown("area")}
+          onPointerMove={onMove("area")}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
@@ -144,20 +141,20 @@ export function ColorPickerDialog({
           />
         </div>
         <div
-          ref={hueRef}
           className="picker-hue"
-          onPointerDown={(event) => bindArea("hue", event)}
-          onPointerMove={moveArea}
-          onPointerUp={() => (dragging.current = null)}
+          onPointerDown={onDown("hue")}
+          onPointerMove={onMove("hue")}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
         >
           <div className="picker-thumb" style={{ left: `${(hue / 360) * 100}%` }} />
         </div>
         <div
-          ref={alphaRef}
           className="picker-alpha"
-          onPointerDown={(event) => bindArea("alpha", event)}
-          onPointerMove={moveArea}
-          onPointerUp={() => (dragging.current = null)}
+          onPointerDown={onDown("alpha")}
+          onPointerMove={onMove("alpha")}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
         >
           <div
             className="absolute inset-0"

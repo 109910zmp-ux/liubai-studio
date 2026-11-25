@@ -1,19 +1,15 @@
 import metadata from "../data/templates.meta.json"
-import theme3 from "../templates/theme-3.html?raw"
-import theme3Motion from "../templates/theme-3-motion.html?raw"
-import theme4 from "../templates/theme-4.html?raw"
-import theme4Motion from "../templates/theme-4-motion.html?raw"
-import theme6 from "../templates/theme-6.html?raw"
-import theme6Motion from "../templates/theme-6-motion.html?raw"
+import themeBase from "../templates/theme-base.html?raw"
 import type { Template, TemplateParam, TemplateSlot } from "./types"
 
-const SOURCES: Record<string, string> = {
-  "theme-3.html": theme3,
-  "theme-3-motion.html": theme3Motion,
-  "theme-4.html": theme4,
-  "theme-4-motion.html": theme4Motion,
-  "theme-6.html": theme6,
-  "theme-6-motion.html": theme6Motion,
+// All three templates share the same 2700-line body; only the name, title and
+// screens meta differ. Build them from one source so the bundle carries a
+// single copy instead of three identical ones.
+function renderTemplateHtml(name: string, slots: TemplateSlot[]) {
+  const screens = `[${slots
+    .map((slot, index) => `{&quot;id&quot;: &quot;d${index}&quot;, &quot;label&quot;: &quot;${slot.label}&quot;, &quot;page&quot;: &quot;${slot.page}&quot;}`)
+    .join(", ")}]`
+  return themeBase.split("__REEDEN_TITLE__").join(name).split("__REEDEN_SCREENS__").join(screens)
 }
 
 interface TemplateMeta {
@@ -32,7 +28,7 @@ export function buildTemplates(): Template[] {
     .map((item) => ({
       key: item.key,
       name: item.name,
-      html: SOURCES[item.file] ?? "",
+      html: renderTemplateHtml(item.name, item.slots),
       count: item.count,
       motion: item.motion,
       params: item.params,
@@ -72,7 +68,12 @@ export function evalWhen(
       const negated = test.startsWith("!")
       const key = negated ? test.slice(1) : test
       const matched = /^param\.([A-Za-z0-9_]+)(?:=(.*))?$/.exec(key)
-      if (!matched) return true
+      if (!matched) {
+        if (import.meta.env.DEV) {
+          console.warn(`[templates] 无法识别的 when 条件: "${part}"，已按显示处理`)
+        }
+        return true
+      }
       const value = paramValue(matched[1], values, template)
       if (matched[2] == null) {
         const result = truthy(value)
