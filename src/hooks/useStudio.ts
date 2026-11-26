@@ -8,6 +8,7 @@ import { useHistory } from "@/hooks/useHistory"
 import { clamp } from "@/lib/math"
 import { STYLE_PRESETS } from "@/lib/presets"
 import { buildPayload, shotPage } from "@/lib/payload"
+import { collectPayloadText, subsetPayloadFonts } from "@/lib/fontSubset"
 import {
   analyzeShots,
   analyzeThemeJson,
@@ -167,6 +168,10 @@ export function useStudio() {
   const [progressVisible, setProgressVisible] = useState(false)
   const [exporting, setExporting] = useState(false)
   const exportAbort = useRef<AbortController | null>(null)
+  // Subset custom fonts once per export from the *current* payload text, then
+  // apply the result to every payload built during that run. Preview keeps the
+  // full font so editing text never shows missing glyphs.
+  const exportFonts = useRef<ParamValues | null>(null)
   const [mobileTab, setMobileTab] = useState<MobileTab>("side")
   const [accordionValue, setAccordionValue] = useState<AccordionValue>(() => {
     const stored = readStored<AccordionValue>(ACCORDION_KEY)
@@ -328,16 +333,55 @@ export function useStudio() {
   }
 
   function makePayload(smallScale = false, paramsOverride?: ParamValues, shotsOverride?: Shot[]) {
+    const activeParams = paramsOverride ?? params
+    const merged = exportFonts.current
+      ? { ...activeParams, ...exportFonts.current }
+      : activeParams
     return buildPayload({
       shots: shotsOverride ?? shots,
       template: currentTpl,
-      params: paramsOverride ?? params,
+      params: merged,
       colors,
       tone,
       meta,
       smallScale,
       lang: language,
     })
+  }
+
+  // Called once at the start of each export. Builds the payload with the full
+  // font, collects every glyph the poster will show, then stores subset fonts
+  // for the rest of this run. Failures are non-fatal: export falls back to the
+  // original font (still works, just slower on huge CJK fonts).
+  async function prepareExportFonts(signal: AbortSignal) {
+    exportFonts.current = null
+    const hasFont = [params.titleFont, params.watermarkFontFile].some(
+      (value) => typeof value === "string" && value.startsWith("data:"),
+    )
+    if (!hasFont) return
+    try {
+      const full = buildPayload({
+        shots,
+        template: currentTpl,
+        params,
+        colors,
+        tone,
+        meta,
+        smallScale: false,
+        lang: language,
+      })
+      const text = collectPayloadText(full)
+      const subset = await subsetPayloadFonts(full, text, signal)
+      if (signal.aborted) return
+      const overrides: ParamValues = {}
+      for (const key of ["titleFont", "watermarkFontFile"]) {
+        if (subset.params[key] !== params[key]) overrides[key] = subset.params[key]
+      }
+      exportFonts.current = overrides
+    } catch (e) {
+      console.error("[subset] prepare failed:", e)
+      exportFonts.current = null
+    }
   }
 
   function contentHeight(frame = previewRef.current) {
@@ -1172,6 +1216,7 @@ export function useStudio() {
 
   function endExport() {
     exportAbort.current = null
+    exportFonts.current = null
     setExporting(false)
     setTimeout(() => setProgressVisible(false), 900)
   }
@@ -1193,6 +1238,7 @@ export function useStudio() {
     // export starts from the top bar, otherwise the run looks like a silent hang.
     const signal = beginExport()
     try {
+      await prepareExportFonts(signal)
       await exportPng({
         preview: previewRef.current,
         templateKey: currentTpl?.key ?? "",
@@ -1240,6 +1286,7 @@ export function useStudio() {
       }
     }
     const signal = beginExport()
+    await prepareExportFonts(signal)
     const size = Math.max(1, currentTpl.count)
     const groups: Shot[][] = []
     for (let i = 0; i < shots.length; i += size) groups.push(shots.slice(i, i + size))
@@ -1266,10 +1313,13 @@ export function useStudio() {
             | (Window & { ReedenShareTemplate?: { render: (payload: StudioPayload) => void } })
             | null
           if (!api?.ReedenShareTemplate) return
+          const activeParams = exportFonts.current
+            ? { ...params, ...exportFonts.current }
+            : params
           const payload = buildPayload({
             shots: group,
             template: currentTpl,
-            params,
+            params: activeParams,
             colors,
             tone,
             meta,
@@ -1304,6 +1354,7 @@ export function useStudio() {
     }
     const signal = beginExport()
     try {
+      await prepareExportFonts(signal)
       // Video needs the 3D stage for seekAnimation to be active. Enable it in the
       // export payload only, so recording works without a hidden manual switch and
       // the user's own parameters stay untouched.
