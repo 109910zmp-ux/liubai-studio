@@ -20,37 +20,12 @@ const crcTable = (() => {
   return table
 })()
 
-function yieldToEventLoop() {
-  return new Promise<void>((resolve) => setTimeout(resolve, 0))
-}
-
-// CRC over a large video can take tens of milliseconds in one synchronous
-// block. Process it in 1 MiB slices and yield between slices so the export
-// dialog stays responsive while a ZIP is being assembled.
-async function crc32Chunked(bytes: Uint8Array) {
+function crc32(bytes: Uint8Array) {
   let crc = 0xffffffff
-  const slice = 1 << 20
-  for (let start = 0; start < bytes.length; start += slice) {
-    const end = Math.min(bytes.length, start + slice)
-    for (let i = start; i < end; i += 1) {
-      crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)
-    }
-    if (end < bytes.length) await yieldToEventLoop()
+  for (let i = 0; i < bytes.length; i += 1) {
+    crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)
   }
   return (crc ^ 0xffffffff) >>> 0
-}
-
-// Blob accepts an ArrayBuffer directly. Headers and `arrayBuffer()` results
-// already own an exact-size buffer, so hand that over instead of copying every
-// part one more time at the end.
-function asBlobPart(bytes: Uint8Array): BlobPart {
-  const buffer = bytes.buffer
-  if (buffer instanceof ArrayBuffer && bytes.byteOffset === 0 && bytes.byteLength === buffer.byteLength) {
-    return buffer
-  }
-  const copy = new Uint8Array(bytes.length)
-  copy.set(bytes)
-  return copy.buffer
 }
 
 function writeHeader(target: DataView, offset: number, value: number) {
@@ -62,20 +37,23 @@ function write32(target: DataView, offset: number, value: number) {
 }
 
 export async function createZip(files: ZipFile[]): Promise<Blob> {
+  const entries = await Promise.all(
+    files.map(async (file) => {
+      const bytes = new Uint8Array(await file.data.arrayBuffer())
+      // DOS date/time: fixed to 1980-01-01 00:00, deterministic and valid.
+      return {
+        name: encoder.encode(file.name),
+        bytes,
+        crc: crc32(bytes),
+      }
+    }),
+  )
+
   const localParts: Uint8Array[] = []
   const centralParts: Uint8Array[] = []
   let offset = 0
-  let count = 0
 
-  // Read, checksum and append one file at a time. The previous Promise.all
-  // held every decoded file in memory simultaneously (and the final step
-  // copied all of them again), which is what made multi-video ZIPs stall.
-  for (const file of files) {
-    const bytes = new Uint8Array(await file.data.arrayBuffer())
-    const name = encoder.encode(file.name)
-    // DOS date/time: fixed to 1980-01-01 00:00, deterministic and valid.
-    const crc = await crc32Chunked(bytes)
-    const entry = { name, bytes, crc }
+  for (const entry of entries) {
     const local = new Uint8Array(30 + entry.name.length)
     const lv = new DataView(local.buffer)
     write32(lv, 0, 0x04034b50) // local file header signature
@@ -115,9 +93,6 @@ export async function createZip(files: ZipFile[]): Promise<Blob> {
     centralParts.push(central)
 
     offset += local.length + entry.bytes.length
-    count += 1
-    // Give the browser a chance to repaint between files.
-    await yieldToEventLoop()
   }
 
   const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0)
@@ -126,12 +101,19 @@ export async function createZip(files: ZipFile[]): Promise<Blob> {
   write32(ev, 0, 0x06054b50) // EOCD signature
   writeHeader(ev, 4, 0) // disk number
   writeHeader(ev, 6, 0) // central directory start disk
-  writeHeader(ev, 8, count)
-  writeHeader(ev, 10, count)
+  writeHeader(ev, 8, entries.length)
+  writeHeader(ev, 10, entries.length)
   write32(ev, 12, centralSize)
   write32(ev, 16, offset)
   writeHeader(ev, 20, 0) // comment length
 
-  const parts = [...localParts, ...centralParts, end].map(asBlobPart)
-  return new Blob(parts, { type: "application/zip" })
+  // Copy each part into its own ArrayBuffer so Blob parts are backed by a
+  // plain ArrayBuffer (TS 5.9's Uint8Array<ArrayBufferLike> is not assignable).
+  const parts = [...localParts, ...centralParts, end]
+  const buffers = parts.map((part) => {
+    const copy = new Uint8Array(part.length)
+    copy.set(part)
+    return copy.buffer
+  })
+  return new Blob(buffers, { type: "application/zip" })
 }

@@ -9,51 +9,6 @@ interface CaptureInfo {
   holder: HTMLElement
   width: number
   height: number
-  slot?: CaptureSlot
-}
-
-// Capture slots are reused across frames. Previously every frame created a
-// fresh offscreen host, attached a new shadow root and injected the whole
-// template stylesheet (tens of KB) into it. A long video does that hundreds of
-// times, so keep a tiny pool of attached hosts and only swap the body subtree.
-interface CaptureSlot {
-  holder: HTMLElement
-  html: HTMLElement
-  style: HTMLElement
-  body: HTMLElement
-  cacheKey: string
-  inUse: boolean
-}
-
-const captureSlots: CaptureSlot[] = []
-
-function acquireCaptureSlot(): CaptureSlot {
-  let slot = captureSlots.find((item) => !item.inUse)
-  if (!slot) {
-    const holder = document.createElement("div")
-    // WebKit only computes styles for attached shadow trees; keep it far
-    // offscreen while we measure images for the inline-SVG replacement.
-    holder.style.cssText = "position:fixed;left:-100000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none"
-    document.body.appendChild(holder)
-    const shadow = holder.attachShadow({ mode: "open" })
-    const html = document.createElementNS("http://www.w3.org/1999/xhtml", "html") as HTMLElement
-    const head = document.createElementNS("http://www.w3.org/1999/xhtml", "head") as HTMLElement
-    const style = document.createElementNS("http://www.w3.org/1999/xhtml", "style") as HTMLElement
-    const body = document.createElementNS("http://www.w3.org/1999/xhtml", "body") as HTMLElement
-    head.appendChild(style)
-    html.append(head, body)
-    shadow.appendChild(html)
-    slot = { holder, html, style, body, cacheKey: "", inUse: false }
-    captureSlots.push(slot)
-  }
-  slot.inUse = true
-  return slot
-}
-
-function releaseCapture(info: CaptureInfo | null) {
-  if (!info?.slot) return
-  info.slot.body.replaceChildren()
-  info.slot.inUse = false
 }
 
 // Simple bounded cache: evict the oldest entry once the limit is reached.
@@ -232,63 +187,22 @@ function evalArithmetic(input: string): number | null {
 // cloning it. rAF is precise and adapts to refresh rate; the timeout fallback
 // keeps background tabs from stalling (rAF is throttled there) so long exports
 // still finish — a regression seen earlier with headless/background recording.
-// Wait until the hardware encoder's queue has drained. Polling with setTimeout
-// burns wakeups on every frame; VideoEncoder fires `dequeue` whenever a chunk
-// is consumed, so wake immediately instead. The short timer is a compatibility
-// fallback for engines that do not emit the event (and for a queue that drained
-// between the size check and listener registration).
-function waitEncodeQueue(encoder: VideoEncoder, limit: number) {
-  if (encoder.encodeQueueSize <= limit) return Promise.resolve()
+function afterPaint(frames: number, fallbackMs: number) {
   return new Promise<void>((resolve) => {
-    let done = false
-    const finish = () => {
-      if (done) return
-      done = true
-      encoder.removeEventListener("dequeue", finish)
-      clearTimeout(timer)
-      resolve()
-    }
-    const timer = setTimeout(finish, 8)
-    encoder.addEventListener("dequeue", finish)
-    if (encoder.encodeQueueSize <= limit) finish()
-  })
-}
-
-export class ExportCancelled extends Error {
-  constructor() {
-    super(tr("已取消导出"))
-    this.name = "ExportCancelled"
-  }
-}
-
-function afterPaint(frames: number, fallbackMs: number, signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
     let remaining = frames
     let done = false
-    let timer = 0
     const finish = () => {
       if (done) return
       done = true
-      clearTimeout(timer)
-      signal?.removeEventListener("abort", onAbort)
       resolve()
     }
-    const onAbort = () => {
-      if (done) return
-      done = true
-      clearTimeout(timer)
-      reject(new ExportCancelled())
-    }
     const tick = () => {
-      if (done) return
       remaining -= 1
       if (remaining <= 0) finish()
       else requestAnimationFrame(tick)
     }
-    if (signal?.aborted) { onAbort(); return }
-    signal?.addEventListener("abort", onAbort, { once: true })
     requestAnimationFrame(tick)
-    timer = window.setTimeout(finish, fallbackMs)
+    setTimeout(finish, fallbackMs)
   })
 }
 
@@ -376,35 +290,15 @@ function hashData(data: string) {
   return (hash >>> 0).toString(36)
 }
 
-export function smallImage(data: string, maxWidth: number, signal?: AbortSignal) {
+export function smallImage(data: string, maxWidth: number) {
   const key = `${hashData(data)}_${data.length}_${maxWidth}`
   const cached = smallCache.get(key)
   if (cached) return Promise.resolve(cached)
-  return new Promise<string>((resolve, reject) => {
-    if (signal?.aborted) { reject(new ExportCancelled()); return }
+  return new Promise<string>((resolve) => {
     const image = new Image()
-    let done = false
-    const finish = (value: string) => {
-      if (done) return
-      done = true
-      clearTimeout(guard)
-      signal?.removeEventListener("abort", onAbort)
-      image.onload = null
-      image.onerror = null
-      resolve(value)
-    }
-    const onAbort = () => {
-      if (done) return
-      done = true
-      clearTimeout(guard)
-      signal?.removeEventListener("abort", onAbort)
-      image.onload = null
-      image.onerror = null
-      reject(new ExportCancelled())
-    }
-    const guard = window.setTimeout(() => finish(data), 6000)
-    signal?.addEventListener("abort", onAbort, { once: true })
+    const guard = setTimeout(() => resolve(data), 6000)
     image.onload = () => {
+      clearTimeout(guard)
       const width = Math.min(maxWidth, image.naturalWidth)
       const height = Math.round(image.naturalHeight * (width / image.naturalWidth))
       const canvas = document.createElement("canvas")
@@ -413,9 +307,12 @@ export function smallImage(data: string, maxWidth: number, signal?: AbortSignal)
       canvas.getContext("2d")?.drawImage(image, 0, 0, width, height)
       const output = canvas.toDataURL("image/jpeg", 0.82)
       cacheSet(smallCache, key, output, CACHE_LIMIT)
-      finish(output)
+      resolve(output)
     }
-    image.onerror = () => finish(data)
+    image.onerror = () => {
+      clearTimeout(guard)
+      resolve(data)
+    }
     image.src = data
   })
 }
@@ -564,35 +461,38 @@ function cloneCaptureNode(
     cacheSet(captureCache, cacheKey, cache, CACHE_LIMIT)
   }
 
-  // Keep the capture tree in a shadow root. Template styles must never be
-  // injected into the main document, or the whole UI flickers every frame.
-  // The host and its skeleton are reused so only the body subtree changes.
-  const slot = acquireCaptureSlot()
-  const { holder, html, style, body } = slot
+  // Keep the capture tree in a detached shadow root. Template styles must never
+  // be injected into the main document, or the whole UI flickers every frame.
+  const holder = document.createElement("div")
+  // WebKit only computes styles for attached shadow trees; keep it far offscreen
+  // while we measure images for the inline-SVG replacement.
+  holder.style.cssText = "position:fixed;left:-100000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none"
+  document.body.appendChild(holder)
+  const shadow = holder.attachShadow({ mode: "open" })
+  const html = document.createElementNS("http://www.w3.org/1999/xhtml", "html")
   // XMLSerializer emits the namespace declaration; setting xmlns manually
-  // duplicates it and WebKit rejects the generated SVG. Clear stale data-*
-  // attributes first so removed parameters do not linger across frames.
-  Array.from(html.attributes).forEach((attribute) => {
-    if (attribute.name.startsWith("data-")) html.removeAttribute(attribute.name)
-  })
+  // duplicates it and WebKit rejects the generated SVG.
   Array.from(root.attributes).forEach((attribute) => {
     if (attribute.name.startsWith("data-")) html.setAttribute(attribute.name, attribute.value)
   })
   // Pin the serialized canvas to the captured layout size so WebKit cannot
   // shrink-to-fit or reflow it differently from the preview.
-  html.style.cssText = `${cache.vars || ""};width:${width}px;height:${height}px;overflow:hidden`
-  if (slot.cacheKey !== cacheKey) {
-    style.textContent = cache.css
-    slot.cacheKey = cacheKey
-  }
-  body.style.cssText = `width:${width}px;height:${height}px;margin:0;overflow:hidden`
-  body.replaceChildren(clone)
+  ;(html as HTMLElement).style.cssText = `${cache.vars || ""};width:${width}px;height:${height}px;overflow:hidden`
+  const head = document.createElementNS("http://www.w3.org/1999/xhtml", "head")
+  const style = document.createElementNS("http://www.w3.org/1999/xhtml", "style")
+  style.textContent = cache.css
+  head.appendChild(style)
+  const body = document.createElementNS("http://www.w3.org/1999/xhtml", "body")
+  ;(body as HTMLElement).style.cssText = `width:${width}px;height:${height}px;margin:0;overflow:hidden`
+  body.appendChild(clone)
+  html.append(head, body)
+  shadow.appendChild(html)
   // Must run after the shadow tree is laid out: computed width/height and
   // object-fit decide how the inline SVG replacement is sized and cropped.
   inlineImagesForCapture(html)
   inlineComputedLedgeStyles(target, html)
 
-  return { el: html, holder, width, height, slot }
+  return { el: html, holder, width, height }
 }
 
 function serializeToSvg(el: Element, width: number, height: number) {
@@ -604,34 +504,21 @@ function serializeToSvg(el: Element, width: number, height: number) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="${width}" height="${height}">${xml}</foreignObject></svg>`
 }
 
-function svgToCanvas(svg: string, width: number, height: number, signal?: AbortSignal) {
+function svgToCanvas(svg: string, width: number, height: number) {
   return new Promise<HTMLCanvasElement>((resolve, reject) => {
     const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
     const image = new Image()
     let done = false
-    let timer = 0
-    const settle = () => {
-      done = true
-      clearTimeout(timer)
-      signal?.removeEventListener("abort", onAbort)
-      image.onload = null
-      image.onerror = null
-    }
-    const onAbort = () => {
-      if (done) return
-      settle()
-      reject(new ExportCancelled())
-    }
-    timer = window.setTimeout(() => {
-      if (done) return
-      settle()
-      reject(new Error(tr("光栅化超时")))
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true
+        reject(new Error(tr("光栅化超时")))
+      }
     }, 8000)
-    if (signal?.aborted) { onAbort(); return }
-    signal?.addEventListener("abort", onAbort, { once: true })
     image.onload = () => {
       if (done) return
-      settle()
+      done = true
+      clearTimeout(timer)
       try {
         const canvas = document.createElement("canvas")
         canvas.width = width
@@ -648,11 +535,19 @@ function svgToCanvas(svg: string, width: number, height: number, signal?: AbortS
     }
     image.onerror = () => {
       if (done) return
-      settle()
+      done = true
+      clearTimeout(timer)
       reject(new Error(tr("光栅化失败（可能是滤镜或字体不受支持）")))
     }
     image.src = url
   })
+}
+
+export class ExportCancelled extends Error {
+  constructor() {
+    super(tr("已取消导出"))
+    this.name = "ExportCancelled"
+  }
 }
 
 // Central cancellation check. Each export calls this at every unit of work so
@@ -685,16 +580,14 @@ async function capturePngBlob(
   templateKey: string,
   targetWidth: number,
   render: () => void,
-  signal?: AbortSignal,
 ): Promise<{ blob: Blob; width: number; height: number }> {
   let info: CaptureInfo | null = null
   try {
     info = cloneCaptureNode(preview, templateKey, render)
     const scale = targetWidth / info.width
     const svg = serializeToSvg(info.el, info.width, info.height)
-    throwIfCancelled(signal)
-    const canvas = await svgToCanvas(svg, Math.round(info.width * scale), Math.round(info.height * scale), signal)
-    releaseCapture(info)
+    const canvas = await svgToCanvas(svg, Math.round(info.width * scale), Math.round(info.height * scale))
+    info.holder.remove()
     info = null
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png")
@@ -702,7 +595,7 @@ async function capturePngBlob(
     if (!blob) throw new Error(tr("生成 PNG 失败"))
     return { blob, width: canvas.width, height: canvas.height }
   } finally {
-    releaseCapture(info)
+    info?.holder.remove()
   }
 }
 
@@ -714,7 +607,7 @@ export async function exportPng(options: PngOptions) {
 
   options.setStatus(tr("正在渲染…"))
   options.setProgress(0.2)
-  const { blob, width, height } = await capturePngBlob(preview, templateKey, targetWidth, renderNow, options.signal)
+  const { blob, width, height } = await capturePngBlob(preview, templateKey, targetWidth, renderNow)
   downloadBlob(blob, exportName(title, ".png"))
   options.setStatus(tr("PNG 已导出：{width} × {height}", { width, height }))
   options.toast(tr("PNG 已导出"))
@@ -768,8 +661,8 @@ export async function exportBatchZip(options: BatchOptions) {
         // renderGroup pushes the batch payload into the iframe; pass a no-op to
         // cloneCaptureNode because the DOM is already showing this batch.
         renderGroup(group)
-        await afterPaint(2, 60, options.signal)
-        const { blob } = await capturePngBlob(preview, template.key, targetWidth, () => {}, options.signal)
+        await afterPaint(2, 60)
+        const { blob } = await capturePngBlob(preview, template.key, targetWidth, () => {})
         files.push({ name: exportName(title, `${suffix}.png`), data: blob })
         pngCount += 1
         step += 1
@@ -835,30 +728,24 @@ interface VideoResult {
   failures: number
 }
 
-type VideoWindow = Window & {
-  Reeden?: { seekAnimation?: (progress: number) => void }
-  ReedenShareTemplate?: { render: (payload: StudioPayload) => void }
-}
-
-interface VideoPrepared {
-  win: VideoWindow
-  preview: HTMLIFrameElement
-  templateKey: string
-  canvas: HTMLCanvasElement
-  context: CanvasRenderingContext2D
-  scale: number
-  mime: string | null
-}
-
-// Material scaling, payload rendering and canvas sizing are identical for
-// every attempt at the same clip. WebCodecs can fail at runtime on iOS even
-// after isConfigSupported() succeeds, so a retry must not repeat this setup.
-async function prepareVideo(options: VideoOptions): Promise<VideoPrepared> {
-  const { preview, template, shots, quality } = options
+// Record one clip and return the blob. Shared by the single video export and
+// the batch ZIP so both paths run exactly the same capture pipeline.
+async function recordVideoOnce(
+  options: VideoOptions,
+  forceEngine?: VideoEngine,
+): Promise<VideoResult> {
+  const { preview, template, shots, duration, fps, quality } = options
   if (!preview) throw new Error(tr("预览未就绪"))
   if (!shots.length) throw new Error(tr("先添加素材"))
 
-  const win = preview.contentWindow as VideoWindow | null
+  const engine = forceEngine ?? videoEngine()
+  if (!engine) throw new Error(tr("此浏览器不支持视频录制，可改用 PNG 导出"))
+  const mime = supportedVideoType()
+
+  const win = preview.contentWindow as (Window & {
+    Reeden?: { seekAnimation?: (progress: number) => void }
+    ReedenShareTemplate?: { render: (payload: StudioPayload) => void }
+  }) | null
   if (!win?.Reeden?.seekAnimation || !win.ReedenShareTemplate) {
     throw new Error(tr("当前模板没有可动的时间轴"))
   }
@@ -868,41 +755,28 @@ async function prepareVideo(options: VideoOptions): Promise<VideoPrepared> {
   const neededWidth = Math.min(1400, Math.round(560 * quality))
   for (const shot of used) {
     throwIfCancelled(options.signal)
-    if (!shot.small) shot.small = await smallImage(shot.data, neededWidth, options.signal)
+    if (!shot.small) shot.small = await smallImage(shot.data, neededWidth)
   }
 
   win.ReedenShareTemplate.render(options.buildPayload(true, used))
-  await afterPaint(2, 300, options.signal)
+  await afterPaint(2, 300)
 
   let info: CaptureInfo | null = null
   try {
     info = cloneCaptureNode(preview, template.key, () => {})
     const scale = Math.max(1, Math.min(3, (640 * quality) / info.width))
-    // H.264 needs even dimensions on iOS VideoToolbox. Snap the canvas size
-    // to even pixels so WebCodecs never receives an odd frame.
+    // H.264 needs even dimensions on iOS VideoToolbox. Compute the scaled
+    // canvas size with an even snap so WebCodecs never receives an odd frame.
     const width = evenDimension(info.width * scale)
     const height = evenDimension(info.height * scale)
+    info.holder.remove()
+    info = null
+
     const canvas = document.createElement("canvas")
     canvas.width = width
     canvas.height = height
     const context = canvas.getContext("2d")
     if (!context) throw new Error(tr("无法创建录制画布"))
-    return { win, preview, templateKey: template.key, canvas, context, scale, mime: supportedVideoType() }
-  } finally {
-    releaseCapture(info)
-  }
-}
-
-// Encode one clip with a specific engine, reusing data from prepareVideo.
-async function recordVideoOnce(
-  options: VideoOptions,
-  prepared: VideoPrepared,
-  forceEngine?: VideoEngine,
-): Promise<VideoResult> {
-  const { duration, fps } = options
-  const { win, preview, templateKey, canvas, context, mime, scale } = prepared
-  const engine = forceEngine ?? videoEngine()
-  if (!engine) throw new Error(tr("此浏览器不支持视频录制，可改用 PNG 导出"))
 
     // --- Encoder setup ------------------------------------------------------
     // WebCodecs: encode every rendered frame directly into an MP4 muxer. No
@@ -1016,11 +890,11 @@ async function recordVideoOnce(
         const progress = index / (total - 1 || 1)
         win.Reeden!.seekAnimation!(progress)
         // Let the template commit its animation state before cloning.
-        await afterPaint(1, 16, options.signal)
-        frame = cloneCaptureNode(preview, templateKey, () => {})
+        await afterPaint(1, 16)
+        frame = cloneCaptureNode(preview, template.key, () => {})
         const svg = serializeToSvg(frame.el, frame.width, frame.height)
         try {
-          const rendered = await svgToCanvas(svg, Math.round(frame.width * scale), Math.round(frame.height * scale), options.signal)
+          const rendered = await svgToCanvas(svg, Math.round(frame.width * scale), Math.round(frame.height * scale))
           // Draw over the previous frame instead of clearing to white: a failed
           // or in-flight rasterization must never expose a blank frame.
           context.drawImage(rendered, 0, 0, canvas.width, canvas.height)
@@ -1038,7 +912,9 @@ async function recordVideoOnce(
               videoFrame.close()
             }
             // Keep the encode queue bounded so long clips do not balloon memory.
-            await waitEncodeQueue(encoder, 12)
+            while (encoder.encodeQueueSize > 12) {
+              await new Promise((resolve) => setTimeout(resolve, 8))
+            }
           } else {
             if (!recordingStarted) {
               // A timeslice avoids the iOS 26+ MediaRecorder MP4 freeze and
@@ -1056,11 +932,11 @@ async function recordVideoOnce(
         } catch (error) {
           // Encoder failures must reach the retry layer, never be counted as a
           // harmless rasterization miss.
-          if (error instanceof VideoEncodeFailure || error instanceof ExportCancelled) throw error
+          if (error instanceof VideoEncodeFailure) throw error
           if (!lastGood) throw new Error(tr("首帧渲染失败"))
           failures += 1
         } finally {
-          releaseCapture(frame)
+          frame.holder.remove()
           frame = null
         }
         options.setProgress((index + 1) / total)
@@ -1074,7 +950,7 @@ async function recordVideoOnce(
         )
       }
     } finally {
-      releaseCapture(frame)
+      frame?.holder.remove()
     }
 
     throwIfCancelled(options.signal)
@@ -1113,45 +989,42 @@ async function recordVideoOnce(
       height: canvas.height,
       failures,
     }
+  } finally {
+    info?.holder.remove()
+    try {
+      win.Reeden?.seekAnimation?.(0)
+    } catch {
+      // Ignore template cleanup errors.
+    }
+  }
 }
 
 // A single clip may be attempted twice: WebCodecs first (fast, no wall-clock
 // wait), then MediaRecorder if the platform encoder fails at runtime. This is
 // what keeps iOS exports working when VideoToolbox rejects the H.264 session
-// despite isConfigSupported() having reported success. Preparation happens
-// once here, so the fallback retry only re-encodes frames.
+// despite isConfigSupported() having reported success.
 async function recordVideo(options: VideoOptions): Promise<VideoResult> {
   const engine = videoEngine()
-  if (!engine) throw new Error(tr("此浏览器不支持视频录制，可改用 PNG 导出"))
-  const prepared = await prepareVideo(options)
-  try {
-    if (engine === "webcodecs") {
+  if (engine === "webcodecs") {
+    try {
+      return await recordVideoOnce(options, "webcodecs")
+    } catch (error) {
+      if (!(error instanceof VideoEncodeFailure)) throw error
+      if (!supportedVideoType() || !mediaRecorderSupported()) throw error
+      options.setStatus(tr("硬件编码失败，切换兼容录制模式…"))
       try {
-        return await recordVideoOnce(options, prepared, "webcodecs")
-      } catch (error) {
-        if (!(error instanceof VideoEncodeFailure)) throw error
-        if (!prepared.mime || !mediaRecorderSupported()) throw error
-        options.setStatus(tr("硬件编码失败，切换兼容录制模式…"))
-        try {
-          return await recordVideoOnce(options, prepared, "mediarecorder")
-        } catch (fallbackError) {
-          // Surface a clear, localized message instead of the raw WebKit error.
-          throw new Error(
-            tr("视频编码失败，兼容模式也未成功：{error}", {
-              error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            }),
-          )
-        }
+        return await recordVideoOnce(options, "mediarecorder")
+      } catch (fallbackError) {
+        // Surface a clear, localized message instead of the raw WebKit error.
+        throw new Error(
+          tr("视频编码失败，兼容模式也未成功：{error}", {
+            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          }),
+        )
       }
     }
-    return await recordVideoOnce(options, prepared, engine)
-  } finally {
-    try {
-      prepared.win.Reeden?.seekAnimation?.(0)
-    } catch {
-      // Ignore template cleanup errors.
-    }
   }
+  return recordVideoOnce(options, engine ?? undefined)
 }
 
 export async function exportVideo(options: VideoOptions & { title: string }) {
