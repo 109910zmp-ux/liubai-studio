@@ -52,6 +52,9 @@
 - **主题 JSON 导入**：支持 Reeden 主题配置，也支持任意含颜色字段的 JSON（详见 [主题配色 JSON](#主题配色-json)）。
 - **浅色 / 深色纸面**：切换作品明暗，不改变已选配色；顶栏界面主题支持 **浅色 / 深色 / 跟随系统** 三态循环。
 - **实时预览**：主预览支持滚轮缩放与拖拽画布；独立悬浮预览可拖标题栏移动、拖**右下角调整窗口大小**、滚轮缩放、最小化或全屏。
+- **中英文界面**：顶栏「中 / EN」按钮一键切换界面语言，选择会被本地记住；只影响界面文字，不改动海报内容。
+- **可取消的导出**：导出时显示实时进度条，可随时「取消导出」中止任务（取消后不会生成文件）。
+- **导出字体子集化**：导出时用 HarfBuzz WASM 按需裁剪自定义字体，只保留画面实际用到的字形，9 MB 级中文字体可压到几 KB，显著加速并避免 iPadOS 视频导出崩溃。
 - **一键全部重置**：清空素材、参数、配色与本机草稿，恢复到初始状态，可用撤销找回。
 - **导出能力**：
   - PNG 图片（可调输出宽度 640–3840）。
@@ -72,8 +75,9 @@
 | 语言 | TypeScript 5.9（严格模式） |
 | 构建 | Vite 7 |
 | 样式 | Tailwind CSS v4 |
-| 组件 | shadcn（基于 Base UI）、lucide-react、liquikit |
-| 动画 | motion |
+| 组件 | Base UI（`@base-ui/react`）、lucide-react、class-variance-authority |
+| 国际化 | 自研轻量 i18n（中文 / 英文，按源文案映射） |
+| 字体子集化 | HarfBuzz WASM（`harfbuzz-subset.wasm`，仅在导出用到自定义字体时按需加载） |
 | 视频编码 | WebCodecs `VideoEncoder` → H.264 MP4 + `mp4-muxer` 封装；MediaRecorder 作为回退 |
 | 单文件产物 | `vite-plugin-singlefile`（构建为可直接双击打开的 HTML） |
 | 测试（预留） | Playwright 1.65（devDependency，尚未接入测试脚本） |
@@ -122,7 +126,7 @@ npm run preview
 3. 用「模板参数」「配色」「底色」调整视觉效果。
 4. 点击顶栏「导出」或左侧「导出」面板，选择 PNG、视频或批量 ZIP。
 
-> 应用内右上角「说明」按钮也内置了同样的快速上手引导。
+> 应用内右上角「说明」按钮也内置了同样的快速上手引导；顶栏「中 / EN」按钮可随时切换中英文界面，选择会被记住。
 
 ### 素材
 
@@ -152,7 +156,7 @@ npm run preview
 | 选项 | 说明 | 可调范围 |
 | --- | --- | --- |
 | PNG 图片 | 单张作品图片 | 宽度 640–3840（默认 1280，步长 64） |
-| 视频 | 动效视频（始终 MP4） | 时长 1–10s、帧率 12–30、清晰度 标准/清晰/高清 |
+| 视频 | 动效视频（优先 MP4，回退录制） | 时长 1–10s、帧率 12–30、清晰度 标准/清晰/高清 |
 | 批量导出 ZIP | 按模板容量分组打包 | 仅 PNG / 仅视频 / 图片 + 视频 |
 
 #### 视频引擎
@@ -166,6 +170,8 @@ npm run preview
 
 - 两条路径都要求模板具备 3D 时间轴（当前模板都满足）；导出时会临时启用 3D 展映，完成后自动恢复原始预览参数。
 - 如果浏览器连 MediaRecorder 都不支持（例如旧版 iOS Safari），视频按钮会禁用并提示改走 PNG。
+- 导出过程中会显示进度条；点击「取消导出」可随时中止当前任务，取消后不会生成文件。
+- 使用自定义字体时，导出前会用 HarfBuzz 做字形子集化（只保留画面用到的字），大字体也能流畅导出。
 
 ### 项目文件与草稿
 
@@ -258,16 +264,20 @@ liubai-studio/
 │   ├── vite-env.d.ts                # Vite 环境类型声明
 │   ├── index.css                    # 全局样式 + safe-area / dvh 适配
 │   ├── components/
-│   │   ├── studio/                  # 工作室各面板（素材 / 模板 / 参数 / 配色 / 导出 / 共享 / 颜色选择器）
-│   │   ├── ui/                      # shadcn 基础组件（button、dialog、slider、textarea…共 18 件）
-│   │   └── liquikit/                # 玻璃拟态组件库（含 glass/ 子目录，motion、engine、optics 等）
+│   │   ├── studio/                  # 工作室各面板与共用组件（素材 / 模板 / 参数 / 配色 / 导出 / 颜色选择器）
+│   │   └── ui/                      # 基础 UI 组件（基于 Base UI；button、dialog、slider 等共 18 件）
+│   ├── i18n/
+│   │   ├── index.tsx                # 语言上下文与切换（中 / 英，localStorage 记忆）
+│   │   └── dictionary.ts            # 中文源文案到英文的映射表
 │   ├── hooks/
 │   │   ├── useStudio.ts             # 核心状态与业务逻辑（含 resetAll）
 │   │   ├── useHistory.ts            # 撤销 / 重做
 │   │   └── useUiTheme.ts            # 界面明暗主题（浅色 / 深色 / 跟随系统）
 │   ├── lib/
-│   │   ├── exporter.ts              # PNG / 视频 / 批量 ZIP 导出（WebCodecs + MediaRecorder 双引擎）
-│   │   ├── templates.ts             # 模板构建与参数求值
+│   │   ├── exporter.ts              # PNG / 视频 / 批量 ZIP 导出（WebCodecs + MediaRecorder 双引擎，支持取消）
+│   │   ├── fontSubset.ts            # 导出时按需裁剪字体（HarfBuzz WASM）
+│   │   ├── harfbuzz-subset.wasm     # 字体子集化 WASM 模块
+│   │   ├── templates.ts             # 由单一模板 base 渲染 3/4/6 图与参数求值
 │   │   ├── project.ts               # 项目文件（JSON）读写
 │   │   ├── draft.ts                 # 草稿（IndexedDB）
 │   │   ├── palette.ts               # 取色与配色分析
@@ -276,15 +286,15 @@ liubai-studio/
 │   │   ├── zip.ts                   # 极简 ZIP 写入
 │   │   ├── math.ts                  # 通用数学工具
 │   │   ├── color.ts                 # 颜色值转换与对比度计算
-│   │   ├── utils.ts                 # 其他通用工具
+│   │   ├── types.ts                 # 共享类型定义
 │   │   └── constants.ts             # 常量与默认配色
-│   ├── templates/                   # 模板 HTML（3/4/6 图各有静态 + motion 动效变体）
+│   ├── templates/theme-base.html    # 模板基底（3/4/6 图共用，按元数据占位替换）
 │   ├── data/templates.meta.json     # 模板元数据（参数分组、开关条件、默认值）
 │   └── …（更多资源）
 ├── index.html                       # HTML 入口
 ├── vite.config.ts                   # Vite 配置（Tailwind v4 + singlefile）
 ├── tsconfig.json                    # TypeScript 配置（严格模式）
-├── components.json                  # shadcn 组件配置
+├── components.json                  # 组件配置（shadcn 风格，基于 Base UI）
 └── package.json
 ```
 
@@ -330,7 +340,16 @@ iOS 26+ 的 MediaRecorder MP4 接口存在已知的冻结问题，这正是新�
 图片水印采用平铺模式。如果觉得单个水印块太大或太小，在「水印与质感」分组调整「图片水印大小（%）」即可；数值越小，平铺密度越大。
 
 **Q：iOS 上导出视频还是失败 / 画面花掉？**
-已针对 iOS 录制的两个已知坑做了专门修复：SVG 渲染前会预解析 `calc()` / `var()` 表达式，H.264 编码时会强制输出偶数像素。如果仍然失败，请确认 Safari 版本 ≥ 16.4，或者暂时改用 PNG 导出。
+已针对 iOS 录制的已知坑做了三重加固：导出前字体子集化、SVG 渲染前预解析 `calc()` / `var()` 表达式、H.264 编码时强制输出偶数像素。如果仍然失败，请确认 Safari 版本 ≥ 16.4，或暂时改用 PNG 导出。
+
+**Q：如何切换中英文界面？**
+点击顶栏的「中 / EN」按钮即可切换，选择保存在浏览器本地（键名 `liubai-language`），下次打开自动沿用。界面语言只影响 UI 文案，不会改动海报上你输入的内容。
+
+**Q：导出的字体文件为什么变小了？会不会缺字？**
+导出时会用 HarfBuzz 按当前画面文字做字形子集化，只保留真正用到的字，所以 9 MB 级中文字体常被压到几 KB。它不会缺字：子集按全部可见文本（标题、图注、水印等）生成，只裁掉未用到的字形。若字体是 woff / woff2 容器，则跳过裁剪、原样使用。
+
+**Q：导出到一半能取消吗？**
+可以。导出期间导出面板会显示「取消导出」按钮与进度条；取消后当前任务立即停止，且不会生成任何不完整的文件。
 
 ## 贡献指南
 
