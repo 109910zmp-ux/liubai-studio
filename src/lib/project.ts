@@ -1,3 +1,4 @@
+import { tr } from "@/i18n"
 import { COLOR_LABELS } from "./constants"
 import type { ColorKey, Colors } from "./constants"
 import type { ParamValues, ProjectFile, Shot, ThemeMeta, Tone } from "./types"
@@ -78,7 +79,7 @@ export function loadProject(value: unknown, nextId: () => string): LoadedProject
         })),
       }
     } else {
-      throw new Error("不是本工具的项目文件")
+      throw new Error(tr("不是本工具的项目文件"))
     }
   }
 
@@ -104,7 +105,7 @@ export function loadProject(value: unknown, nextId: () => string): LoadedProject
       data: shot.data,
       width: shot.width,
       height: shot.height,
-      label: shot.label || "截图",
+      label: shot.label || tr("截图"),
       caption: shot.caption || "",
       page: shot.page || "photo",
       pageSet: shot.pageSet || false,

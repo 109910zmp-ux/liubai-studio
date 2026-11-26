@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { PointerEvent as ReactPointerEvent } from "react"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ export function ColorPickerDialog({
   onChange: (key: ColorKey, hex: string, alpha: number) => void
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const [hue, setHue] = useState(0)
   const [saturation, setSaturation] = useState(1)
   const [value, setValue] = useState(1)
@@ -123,7 +125,7 @@ export function ColorPickerDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="picker-dialog sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>选择颜色</DialogTitle>
+          <DialogTitle>{t("选择颜色")}</DialogTitle>
         </DialogHeader>
         <div
           className="picker-area mt-4"
@@ -184,7 +186,7 @@ export function ColorPickerDialog({
             }}
             onBlur={apply}
           />
-          <Button size="sm" onClick={apply}>完成</Button>
+          <Button size="sm" onClick={apply}>{t("完成")}</Button>
         </div>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {SWATCHES.map((swatch) => (

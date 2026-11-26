@@ -1,3 +1,4 @@
+import { tr } from "@/i18n"
 import { DARK_COLORS, LIGHT_COLORS, REEDEN_KEYS } from "./constants"
 import type { ColorKey, Colors } from "./constants"
 import { contrastRatio, fromHsl, luminance, mix, parseColor, rgbToHsv } from "./color"
@@ -301,7 +302,7 @@ export function analyzeThemeJson(value: unknown, current: Colors): ThemeImportRe
     scan(root, 0)
   }
 
-  if (!found) throw new Error("没有识别到颜色字段")
+  if (!found) throw new Error(tr("没有识别到颜色字段"))
 
   const name = String(
     root.name || root.title || conf.name || conf.title || conf.themeName || "",

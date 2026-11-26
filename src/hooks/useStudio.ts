@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { PointerEvent as ReactPointerEvent } from "react"
 import { toast } from "@/components/ui/toast"
+import { tr, useI18n } from "@/i18n"
 import { DARK_COLORS, LIGHT_COLORS } from "@/lib/constants"
 import type { ColorKey, Colors } from "@/lib/constants"
 import { useHistory } from "@/hooks/useHistory"
@@ -15,7 +16,7 @@ import {
   imageBrightness,
   setToneFromMode,
 } from "@/lib/palette"
-import { exportName, exportPng, exportVideo, exportBatchZip, downloadBlob, videoEngine, videoSupported } from "@/lib/exporter"
+import { exportName, exportPng, exportVideo, exportBatchZip, downloadBlob, videoEngine, videoSupported, ExportCancelled } from "@/lib/exporter"
 import { clearDraft, loadDraft, saveDraft } from "@/lib/draft"
 import { loadProject, projectJson } from "@/lib/project"
 import type { LoadedProject } from "@/lib/project"
@@ -23,6 +24,28 @@ import { buildTemplates, evalWhen, paramValue } from "@/lib/templates"
 import type { ParamValues, Shot, StudioPayload, Template, ThemeMeta, Tone } from "@/lib/types"
 
 type AccordionValue = string[]
+type FloatLayout = { x: number; y: number; w: number; h: number; zoom: number }
+
+const ACCORDION_KEY = "liubai-accordion-sections"
+const FLOAT_LAYOUT_KEY = "liubai-float-layout"
+
+function readStored<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : null
+  } catch {
+    return null
+  }
+}
+
+function writeStored(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // UI convenience only — ignore quota / disabled storage.
+  }
+}
+
 type PickerState = { open: boolean; key: ColorKey | null }
 type MobileTab = "side" | "main"
 type FloatPlacement = "open" | "compact" | "normal"
@@ -99,17 +122,19 @@ function readImage(file: File, nextId: () => string): Promise<ReadImageResult> {
       image.onerror = () => resolve({
         shot: null,
         error: isHeic
-          ? `${file.name}：当前浏览器无法解码 HEIC，请先转换为 JPG / PNG`
-          : `${file.name}：无法解码该图片`,
+          ? tr("{name}：当前浏览器无法解码 HEIC，请先转换为 JPG / PNG", { name: file.name })
+          : tr("{name}：无法解码该图片", { name: file.name }),
       })
       image.src = String(reader.result)
     }
-    reader.onerror = () => resolve({ shot: null, error: `${file.name}：读取失败` })
+    reader.onerror = () =>
+      resolve({ shot: null, error: tr("{name}：读取失败", { name: file.name }) })
     reader.readAsDataURL(file)
   })
 }
 
 export function useStudio() {
+  const { t, language } = useI18n()
   const notify = (message: string) => toast.add({ title: message, timeout: 2400 })
 
   const templates = TEMPLATES
@@ -126,21 +151,30 @@ export function useStudio() {
   const [sharer, setSharer] = useState("")
   const [urlText, setUrlText] = useState("")
   const [zoom, setZoomValue] = useState(1)
-  const [status, setStatus] = useState("正在载入模板…")
+  const [status, setStatus] = useState(t("正在载入模板…"))
   const [tplHint, setTplHint] = useState(
-    DEFAULT_TEMPLATE ? `当前：${DEFAULT_TEMPLATE.name} · ${DEFAULT_TEMPLATE.count} 个位置` : "",
+    DEFAULT_TEMPLATE
+      ? t("当前：{name} · {count} 个位置", { name: t(DEFAULT_TEMPLATE.name), count: DEFAULT_TEMPLATE.count })
+      : "",
   )
   const [jsonRaw, setJsonRaw] = useState("")
-  const [jsonStatus, setJsonStatus] = useState("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。")
-  const [colorStatus, setColorStatus] = useState("默认")
+  const [jsonStatus, setJsonStatus] = useState(t("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。"))
+  const [colorStatus, setColorStatus] = useState(t("默认"))
   const [projStatus, setProjStatus] = useState("")
-  const [draftStatus, setDraftStatus] = useState("正在检查草稿…")
+  const [draftStatus, setDraftStatus] = useState(t("正在检查草稿…"))
   const [exportStatus, setExportStatus] = useState("")
   const [progress, setProgress] = useState(0)
   const [progressVisible, setProgressVisible] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const exportAbort = useRef<AbortController | null>(null)
   const [mobileTab, setMobileTab] = useState<MobileTab>("side")
-  const [accordionValue, setAccordionValue] = useState<AccordionValue>(["color", "assets", "templates"])
+  const [accordionValue, setAccordionValue] = useState<AccordionValue>(() => {
+    const stored = readStored<AccordionValue>(ACCORDION_KEY)
+    const valid = Array.isArray(stored)
+      ? stored.filter((key) => key !== "tone")
+      : ["color", "assets", "templates"]
+    return valid
+  })
   const [picker, setPicker] = useState<PickerState>({ open: false, key: null })
   const [projectOpen, setProjectOpen] = useState(false)
   const [floatOpen, setFloatOpen] = useState(false)
@@ -156,6 +190,30 @@ export function useStudio() {
     videoSupported() ? "both" : "images",
   )
 
+  // Status text is stored as a translated string at the moment it is set.
+  // Refresh the persistent ones when the interface language changes so the
+  // panel does not keep a stale Chinese/English sentence.
+  useEffect(() => {
+    setStatus(
+      t("已更新 · {count} 张素材 · {name}", {
+        count: shots.length,
+        name: t(currentTpl?.name ?? ""),
+      }),
+    )
+    setTplHint(
+      currentTpl
+        ? t("当前：{name} · {count} 个位置", {
+            name: t(currentTpl.name),
+            count: currentTpl.count,
+          })
+        : "",
+    )
+    setJsonStatus(t("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。"))
+    setDraftStatus(t("自动保存已开启"))
+    // t is captured from the render for this language; re-run only on change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language])
+
   const meta: ThemeMeta = { name, description, author, sharer, urlText }
 
   const previewRef = useRef<HTMLIFrameElement>(null)
@@ -164,7 +222,13 @@ export function useStudio() {
   const floatBodyRef = useRef<HTMLDivElement>(null)
   const floatHeadRef = useRef<HTMLDivElement>(null)
   const floatGripRef = useRef<HTMLDivElement>(null)
-  const floatSize = useRef<{ w: number; h: number } | null>(null)
+  const [initialFloat] = useState(() => readStored<FloatLayout>(FLOAT_LAYOUT_KEY))
+  const floatSize = useRef<{ w: number; h: number } | null>(
+    initialFloat ? { w: initialFloat.w, h: initialFloat.h } : null,
+  )
+  const floatPos = useRef<{ x: number; y: number } | null>(
+    initialFloat ? { x: initialFloat.x, y: initialFloat.y } : null,
+  )
   const snapLeftRef = useRef<HTMLDivElement>(null)
   const snapRightRef = useRef<HTMLDivElement>(null)
   const pvwrapRef = useRef<HTMLDivElement>(null)
@@ -184,7 +248,7 @@ export function useStudio() {
   const shotSeq = useRef(0)
   const floatTemplate = useRef("")
   const floatLoaded = useRef(false)
-  const floatZoom = useRef(1)
+  const floatZoom = useRef(initialFloat?.zoom ?? 1)
   const zoomRef = useRef(1)
   const autoFitRef = useRef(true)
   const panRef = useRef({ x: 0, y: 0 })
@@ -240,7 +304,10 @@ export function useStudio() {
     setUrlText(snapshot.urlText)
     setTplHint(
       snapshot.currentTpl
-        ? `当前：${snapshot.currentTpl.name} · ${snapshot.currentTpl.count} 个位置`
+        ? t("当前：{name} · {count} 个位置", {
+            name: t(snapshot.currentTpl.name),
+            count: snapshot.currentTpl.count,
+          })
         : "",
     )
   }
@@ -269,6 +336,7 @@ export function useStudio() {
       tone,
       meta,
       smallScale,
+      lang: language,
     })
   }
 
@@ -328,11 +396,26 @@ export function useStudio() {
     }
   }
 
+  function saveFloatLayout() {
+    const win = floatWinRef.current
+    if (!win || !floatOpen) return
+    const rect = win.getBoundingClientRect()
+    const size = floatSize.current
+    writeStored(FLOAT_LAYOUT_KEY, {
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+      w: Math.round(size?.w ?? win.offsetWidth),
+      h: Math.round(size?.h ?? (floatBodyRef.current?.offsetHeight ?? win.offsetHeight)),
+      zoom: Number(floatZoom.current.toFixed(3)),
+    } satisfies FloatLayout)
+  }
+
   function zoomFloatBy(direction: number) {
     const next = clamp(floatZoom.current * (direction > 0 ? 1.15 : 1 / 1.15), 0.3, 4)
     if (Math.abs(next - floatZoom.current) < 0.001) return
     floatZoom.current = next
     fitFloat()
+    saveFloatLayout()
   }
 
   function placeFloat(mode: FloatPlacement) {
@@ -435,10 +518,12 @@ export function useStudio() {
     if (!api?.ReedenShareTemplate) return
     try {
       api.ReedenShareTemplate.render(makePayload())
-      setStatus(`已更新 · ${shots.length} 张素材 · ${currentTpl?.name ?? ""}`)
+      setStatus(
+        t("已更新 · {count} 张素材 · {name}", { count: shots.length, name: t(currentTpl?.name ?? "") }),
+      )
       observePreview(frame)
     } catch (error) {
-      setStatus(`预览出错：${error instanceof Error ? error.message : String(error)}`)
+      setStatus(t("预览出错：{error}", { error: error instanceof Error ? error.message : String(error) }))
     }
     syncFloat()
   }
@@ -525,7 +610,7 @@ export function useStudio() {
     const cached = previewFrames.current.get(template.key)
     if (cached) return cached
     const frame = document.createElement("iframe")
-    frame.title = "留白模板预览"
+    frame.title = t("留白模板预览")
     frame.className = "preview-shell"
     frame.style.width = "640px"
     frame.style.height = "900px"
@@ -563,7 +648,7 @@ export function useStudio() {
     if (!template) return
     const frame = ensurePreviewFrame(template)
     if (!frame) return
-    setStatus(`正在载入 ${template.name}…`)
+    setStatus(t("正在载入 {name}…", { name: t(template.name) }))
     previewFrames.current.forEach((item, key) => {
       item.style.display = key === template.key ? "block" : "none"
     })
@@ -580,7 +665,7 @@ export function useStudio() {
     setCurrentTpl(template)
     setParams({})
     setActivePreset(null)
-    setTplHint(`当前：${template.name} · ${template.count} 个位置`)
+    setTplHint(t("当前：{name} · {count} 个位置", { name: t(template.name), count: template.count }))
   }
 
   function autoPickTemplate(list: Shot[] = shots) {
@@ -590,7 +675,9 @@ export function useStudio() {
       setCurrentTpl(target)
       setParams({})
       setActivePreset(null)
-      setTplHint(`当前：${target.name} · 已按 ${list.length} 张自动选择`)
+      setTplHint(
+      t("当前：{name} · 已按 {count} 张自动选择", { name: t(target.name), count: list.length }),
+    )
     }
   }
 
@@ -661,6 +748,15 @@ export function useStudio() {
     setFloatMin(false)
     requestAnimationFrame(() => {
       placeFloat("open")
+      // Restore the last dragged position on desktop; keepFloatInView below
+      // clamps it back on screen if the viewport has shrunk since last time.
+      const saved = floatPos.current
+      if (saved && window.innerWidth > 820 && !floatBig && !floatCompact) {
+        win.style.left = `${saved.x}px`
+        win.style.top = `${saved.y}px`
+        win.style.right = "auto"
+        win.style.bottom = "auto"
+      }
       fitFloat()
       keepFloatInView()
       // Reopened on the same template: the document is still mounted, so repaint
@@ -739,33 +835,35 @@ export function useStudio() {
   function autoPalette() {
     const source = shotsRef.current
     if (!source.length) {
-      notify("先添加素材")
+      notify(t("先添加素材"))
       return
     }
     const limit = currentTpl?.count ?? 6
-    notify(`正在分析 ${Math.min(source.length, limit)} 张素材…`)
+    notify(
+      t("正在分析 {count} 张素材…", { count: Math.min(source.length, limit) }),
+    )
     analyzeShots(source, limit).then((result) => {
       if (!result) {
-        notify("没有可分析的素材")
+        notify(t("没有可分析的素材"))
         return
       }
       recordDiscrete()
       const derived = deriveAutoPalette(result)
       setColors(derived.colors)
       setToneState(derived.tone)
-      setColorStatus(`${Math.min(source.length, limit)} 色`)
+      setColorStatus(t("{count} 色", { count: Math.min(source.length, limit) }))
       annotateShots(source)
       notify(
         result.voted
-          ? `已按 ${Math.min(source.length, limit)} 张素材取色`
-          : "素材偏灰，已生成中性配色",
+          ? t("已按 {count} 张素材取色", { count: Math.min(source.length, limit) })
+          : t("素材偏灰，已生成中性配色"),
       )
     })
   }
 
   function applyJson(raw: string) {
     if (!raw.trim()) {
-      setJsonStatus("还没有内容可以应用")
+      setJsonStatus(t("还没有内容可以应用"))
       return false
     }
     try {
@@ -786,13 +884,18 @@ export function useStudio() {
       if (result.meta.author) setAuthor(result.meta.author)
       if (result.meta.sharer) setSharer(result.meta.sharer)
       setJsonStatus(
-        `已识别 ${result.found} 个颜色${result.mode ? ` · ${result.mode === "dark" ? "深色" : "浅色"}模式` : ""}`,
+        t("已识别 {count} 个颜色{mode}", {
+          count: result.found,
+          mode: result.mode
+            ? t(" · {mode}模式", { mode: t(result.mode === "dark" ? "深色" : "浅色") })
+            : "",
+        }),
       )
-      setColorStatus(`${result.found} 色`)
-      notify("配色已应用")
+      setColorStatus(t("{count} 色", { count: result.found }))
+      notify(t("配色已应用"))
       return true
     } catch (error) {
-      setJsonStatus(`无法解析：${error instanceof Error ? error.message : String(error)}`)
+      setJsonStatus(t("无法解析：{error}", { error: error instanceof Error ? error.message : String(error) }))
       return false
     }
   }
@@ -807,13 +910,13 @@ export function useStudio() {
     recordDiscrete()
     setColors({ ...(tone === "dark" ? DARK_COLORS : LIGHT_COLORS) })
     setAlpha({})
-    setColorStatus("默认")
+    setColorStatus(t("默认"))
   }
 
   async function addFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList).filter((file) => /^image\//.test(file.type))
     if (!files.length) {
-      notify("请选择图片文件")
+      notify(t("请选择图片文件"))
       return
     }
     const loaded: Shot[] = []
@@ -824,7 +927,7 @@ export function useStudio() {
       if (result.error) errors.push(result.error)
     }
     if (!loaded.length) {
-      notify(errors[0] ?? "没有可用的图片")
+      notify(errors[0] ?? t("没有可用的图片"))
       return
     }
     if (errors.length) notify(errors[0])
@@ -834,7 +937,7 @@ export function useStudio() {
     autoPickTemplate(next)
     // Adding assets never rewrites the user's palette or paper tone. Keep the
     // action explicit: offer color extraction as a hint the user can act on.
-    notify(`已加入 ${loaded.length} 张 · 可在「配色」按素材取色`)
+    notify(t("已加入 {count} 张 · 可在「配色」按素材取色", { count: loaded.length }))
   }
 
   function clearShots() {
@@ -920,7 +1023,7 @@ export function useStudio() {
     const [moved] = next.splice(drag.from, 1)
     next.splice(to, 0, moved)
     commitShots(next)
-    notify("顺序已更新")
+    notify(t("顺序已更新"))
   }
 
   function setParamValue(key: string, value: string | number | boolean) {
@@ -937,7 +1040,7 @@ export function useStudio() {
     // template defaults, so switching between presets never leaves stale values.
     setParams({ ...preset.values })
     setActivePreset(key)
-    notify(`已应用「${preset.name}」风格`)
+    notify(t("已应用「{name}」风格", { name: t(preset.name) }))
   }
 
   function saveProject() {
@@ -951,9 +1054,9 @@ export function useStudio() {
     })
     downloadBlob(
       new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      exportName(name, " 项目.json"),
+      exportName(name, t(" 项目.json")),
     )
-    setProjStatus("已保存")
+    setProjStatus(t("已保存"))
   }
 
   // Shared by manual project import and draft restore so both paths apply
@@ -974,7 +1077,7 @@ export function useStudio() {
       templates.find((item) => item.count >= loaded.shots.length) ??
       templates[0]
     setCurrentTpl(target)
-    setTplHint(`当前：${target.name} · ${originLabel}`)
+    setTplHint(t("当前：{name} · {hint}", { name: t(target.name), hint: t(originLabel) }))
     setProjStatus(originLabel)
   }
 
@@ -982,18 +1085,18 @@ export function useStudio() {
     try {
       const loaded = loadProject(JSON.parse(await file.text()), nextId)
       recordDiscrete()
-      applyLoadedProject(loaded, "项目已载入")
+      applyLoadedProject(loaded, t("项目已载入"))
       setProjectOpen(false)
-      notify("项目已载入")
+      notify(t("项目已载入"))
     } catch (error) {
-      setProjStatus(`载入失败：${error instanceof Error ? error.message : String(error)}`)
+      setProjStatus(t("载入失败：{error}", { error: error instanceof Error ? error.message : String(error) }))
     }
   }
 
   async function clearDraftNow() {
     await clearDraft()
-    setDraftStatus("草稿已清空 · 新改动会自动保存")
-    notify("草稿已清空")
+    setDraftStatus(t("草稿已清空 · 新改动会自动保存"))
+    notify(t("草稿已清空"))
   }
 
   // 全部重置：把可编辑文档恢复到初始状态，同时清掉本机草稿，避免刷新后旧内容回灌。
@@ -1001,7 +1104,11 @@ export function useStudio() {
     recordDiscrete()
     commitShots([])
     setCurrentTpl(DEFAULT_TEMPLATE)
-    setTplHint(DEFAULT_TEMPLATE ? `当前：${DEFAULT_TEMPLATE.name} · ${DEFAULT_TEMPLATE.count} 个位置` : "")
+    setTplHint(
+      DEFAULT_TEMPLATE
+        ? t("当前：{name} · {count} 个位置", { name: t(DEFAULT_TEMPLATE.name), count: DEFAULT_TEMPLATE.count })
+        : "",
+    )
     setParams({})
     setActivePreset(null)
     setColors({ ...LIGHT_COLORS })
@@ -1013,13 +1120,13 @@ export function useStudio() {
     setSharer("")
     setUrlText("")
     setZoomValue(1)
-    setColorStatus("默认")
+    setColorStatus(t("默认"))
     setProjStatus("")
     setJsonRaw("")
-    setJsonStatus("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。")
+    setJsonStatus(t("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。"))
     await clearDraft()
-    setDraftStatus("已全部重置 · 新改动会自动保存")
-    notify("已全部重置")
+    setDraftStatus(t("已全部重置 · 新改动会自动保存"))
+    notify(t("已全部重置"))
   }
 
   function editName(value: string) {
@@ -1047,19 +1154,44 @@ export function useStudio() {
     setUrlText(value)
   }
 
+  function exportErrorMessage(error: unknown, prefix: string) {
+    if (error instanceof ExportCancelled) return t("已取消导出")
+    const message = error instanceof Error ? error.message : String(error)
+    return `${prefix}：${message}`
+  }
+
+  function beginExport() {
+    exportAbort.current?.abort()
+    exportAbort.current = new AbortController()
+    openSection("export")
+    setExporting(true)
+    setProgressVisible(true)
+    setProgress(0)
+    return exportAbort.current.signal
+  }
+
+  function endExport() {
+    exportAbort.current = null
+    setExporting(false)
+    setTimeout(() => setProgressVisible(false), 900)
+  }
+
+  function cancelExport() {
+    if (!exportAbort.current) return
+    exportAbort.current.abort()
+    setExportStatus(t("正在取消…"))
+  }
+
   async function runExportPng() {
     if (!name.trim()) {
-      notify("先填写主题名字")
+      notify(t("先填写主题名字"))
       openSection("color")
       setTimeout(() => nameInputRef.current?.focus(), 120)
       return
     }
     // The progress bar and status live in the Export accordion. Reveal it whenever
     // export starts from the top bar, otherwise the run looks like a silent hang.
-    openSection("export")
-    setExporting(true)
-    setProgressVisible(true)
-    setProgress(0)
+    const signal = beginExport()
     try {
       await exportPng({
         preview: previewRef.current,
@@ -1071,30 +1203,30 @@ export function useStudio() {
         setProgress,
         setStatus: setExportStatus,
         toast: notify,
+        signal,
       })
     } catch (error) {
-      setExportStatus(`导出失败：${error instanceof Error ? error.message : String(error)}`)
-      notify("PNG 导出失败")
+      setExportStatus(exportErrorMessage(error, t("导出失败")))
+      if (!(error instanceof ExportCancelled)) notify(t("PNG 导出失败"))
     } finally {
-      setExporting(false)
-      setTimeout(() => setProgressVisible(false), 900)
+      endExport()
     }
   }
 
   async function runBatchExport() {
     if (!currentTpl) {
-      notify("先选择模板")
+      notify(t("先选择模板"))
       return
     }
     if (!shots.length) {
-      notify("先添加素材")
+      notify(t("先添加素材"))
       return
     }
     const includePng = batchFormat === "images" || batchFormat === "both"
     const includeVideo = batchFormat === "videos" || batchFormat === "both"
     if (includeVideo && !videoAvailable) {
-      setExportStatus("此浏览器不支持视频录制，请把「批量内容」改为仅 PNG 图片。")
-      notify("不支持视频录制，请用 PNG")
+      setExportStatus(t("此浏览器不支持视频录制，请把「批量内容」改为仅 PNG 图片。"))
+      notify(t("不支持视频录制，请用 PNG"))
       return
     }
     if (includeVideo) {
@@ -1102,15 +1234,12 @@ export function useStudio() {
         | (Window & { Reeden?: { seekAnimation?: (progress: number) => void } })
         | null
       if (!api?.Reeden?.seekAnimation) {
-        setExportStatus("当前模板没有可动的时间轴，请把「批量内容」改为仅 PNG 图片。")
-        notify("当前模板不支持视频")
+        setExportStatus(t("当前模板没有可动的时间轴，请把「批量内容」改为仅 PNG 图片。"))
+        notify(t("当前模板不支持视频"))
         return
       }
     }
-    openSection("export")
-    setExporting(true)
-    setProgressVisible(true)
-    setProgress(0)
+    const signal = beginExport()
     const size = Math.max(1, currentTpl.count)
     const groups: Shot[][] = []
     for (let i = 0; i < shots.length; i += size) groups.push(shots.slice(i, i + size))
@@ -1144,6 +1273,7 @@ export function useStudio() {
             colors,
             tone,
             meta,
+            lang: language,
           })
           api.ReedenShareTemplate.render(payload)
         },
@@ -1151,32 +1281,28 @@ export function useStudio() {
         setProgress,
         setStatus: setExportStatus,
         toast: notify,
+        signal,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      setExportStatus(`批量导出失败：${message}`)
-      notify("批量导出失败")
+      setExportStatus(exportErrorMessage(error, t("批量导出失败")))
+      if (!(error instanceof ExportCancelled)) notify(t("批量导出失败"))
     } finally {
-      setExporting(false)
-      setTimeout(() => setProgressVisible(false), 900)
+      endExport()
       schedulePreview()
     }
   }
 
   async function runExportVideo() {
     if (!currentTpl) {
-      notify("先选择模板")
+      notify(t("先选择模板"))
       return
     }
     if (!videoAvailable) {
-      setExportStatus("此浏览器不支持视频录制。可改用「PNG 图片」导出。")
-      notify("不支持视频录制，请用 PNG")
+      setExportStatus(t("此浏览器不支持视频录制。可改用「PNG 图片」导出。"))
+      notify(t("不支持视频录制，请用 PNG"))
       return
     }
-    openSection("export")
-    setExporting(true)
-    setProgressVisible(true)
-    setProgress(0)
+    const signal = beginExport()
     try {
       // Video needs the 3D stage for seekAnimation to be active. Enable it in the
       // export payload only, so recording works without a hidden manual switch and
@@ -1195,14 +1321,13 @@ export function useStudio() {
         setProgress,
         setStatus: setExportStatus,
         toast: notify,
+        signal,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      setExportStatus(`导出失败：${message}`)
-      notify("视频导出失败")
+      setExportStatus(exportErrorMessage(error, t("导出失败")))
+      if (!(error instanceof ExportCancelled)) notify(t("视频导出失败"))
     } finally {
-      setExporting(false)
-      setTimeout(() => setProgressVisible(false), 900)
+      endExport()
       // Export rendered a temporary 3D payload; restore the user's real preview.
       schedulePreview()
     }
@@ -1213,23 +1338,27 @@ export function useStudio() {
   }
 
   const latestActions = useRef({
-    fitFloat, refreshPeek, syncFloat, renderFloat, fitZoom, pushPreview, zoomBy, zoomFloatBy,
+    fitFloat, refreshPeek, syncFloat, renderFloat, fitZoom, pushPreview, zoomBy, zoomFloatBy, saveFloatLayout,
     undo: () => false as boolean,
     redo: () => false as boolean,
   })
   latestActions.current = {
-    fitFloat, refreshPeek, syncFloat, renderFloat, fitZoom, pushPreview, zoomBy, zoomFloatBy,
+    fitFloat, refreshPeek, syncFloat, renderFloat, fitZoom, pushPreview, zoomBy, zoomFloatBy, saveFloatLayout,
     undo: () => {
       const done = history.undo()
-      if (done) notify("已撤销")
+      if (done) notify(t("已撤销"))
       return done
     },
     redo: () => {
       const done = history.redo()
-      if (done) notify("已重做")
+      if (done) notify(t("已重做"))
       return done
     },
   }
+
+  useEffect(() => {
+    writeStored(ACCORDION_KEY, accordionValue)
+  }, [accordionValue])
 
   useEffect(() => {
     if (currentTpl) loadPreview(currentTpl)
@@ -1241,7 +1370,7 @@ export function useStudio() {
   useEffect(() => {
     if (currentTpl) schedulePreview()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText])
+  }, [currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText, language])
 
   // Autosave: restore once on mount, then persist debounced edits. The guard
   // prevents the empty initial state from overwriting a stored draft before
@@ -1257,14 +1386,14 @@ export function useStudio() {
       draftBooted.current = true
       if (draft) {
         try {
-          applyLoadedProject(loadProject(draft, nextId), "草稿已恢复")
-          setDraftStatus("草稿已恢复 · 改动会自动保存")
-          notify("已恢复上次草稿")
+          applyLoadedProject(loadProject(draft, nextId), t("草稿已恢复"))
+          setDraftStatus(t("草稿已恢复 · 改动会自动保存"))
+          notify(t("已恢复上次草稿"))
         } catch {
-          setDraftStatus("草稿损坏，已忽略 · 改动会自动保存")
+          setDraftStatus(t("草稿损坏，已忽略 · 改动会自动保存"))
         }
       } else {
-        setDraftStatus("自动保存已开启")
+        setDraftStatus(t("自动保存已开启"))
       }
     })()
     return () => {
@@ -1276,7 +1405,7 @@ export function useStudio() {
   useEffect(() => {
     if (!draftBooted.current) return
     window.clearTimeout(draftTimer.current)
-    setDraftStatus("正在保存草稿…")
+    setDraftStatus(t("正在保存草稿…"))
     draftTimer.current = window.setTimeout(() => {
       const data = projectJson({
         templateKey: currentTpl?.key ?? null,
@@ -1289,13 +1418,13 @@ export function useStudio() {
       void saveDraft(data)
         .then(() => {
           const time = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-          setDraftStatus(`草稿已保存 ${time}`)
+          setDraftStatus(t("草稿已保存 {time}", { time }))
         })
-        .catch(() => setDraftStatus("草稿保存失败 · 请用项目文件保存"))
+        .catch(() => setDraftStatus(t("草稿保存失败 · 请用项目文件保存")))
     }, 900)
     return () => window.clearTimeout(draftTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText])
+  }, [currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText, language])
 
   // Re-fit the floating preview when its window mode changes.
   useEffect(() => {
@@ -1310,7 +1439,7 @@ export function useStudio() {
   // Boot once: wire global interactions and check browser capabilities.
   useEffect(() => {
     if (!videoAvailable) {
-      setExportStatus("提示：当前浏览器不支持视频录制，PNG 导出不受影响。")
+      setExportStatus(t("提示：当前浏览器不支持视频录制，PNG 导出不受影响。"))
     }
 
     const head = floatHeadRef.current
@@ -1383,6 +1512,7 @@ export function useStudio() {
       else if (x + width > window.innerWidth - safe.right - 26) {
         win.style.left = `${window.innerWidth - safe.right - width + 22}px`
       }
+      latestActions.current.saveFloatLayout()
     }
 
     // Bottom-right grip: let the user resize the floating window freely.
@@ -1420,7 +1550,9 @@ export function useStudio() {
       if (event.cancelable) event.preventDefault()
     }
     const endSize = () => {
+      if (!sizing) return
       sizing = false
+      latestActions.current.saveFloatLayout()
     }
 
     const onResize = () => {
@@ -1703,6 +1835,7 @@ export function useStudio() {
       runExportPng,
       runExportVideo,
       runBatchExport,
+      cancelExport,
       setZoom: setUserZoom,
       zoomBy,
       fitZoom,

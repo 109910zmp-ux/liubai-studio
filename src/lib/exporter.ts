@@ -1,3 +1,4 @@
+import { tr } from "@/i18n"
 import { ArrayBufferTarget, Muxer } from "mp4-muxer"
 import { VIDEO_TYPES } from "./constants"
 import type { Shot, StudioPayload, Template } from "./types"
@@ -256,13 +257,13 @@ function resolveCssCalc(css: string, root: HTMLElement, source?: HTMLElement) {
 
 export function exportName(title: string, suffix: string) {
   const WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
-  let base = (title.trim() || "留白")
+  let base = (title.trim() || tr("留白"))
     .replace(/[\\/:*?"<>|\n\r\t]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 60)
     .replace(/[. ]+$/g, "")
-  if (!base || WINDOWS_RESERVED.test(base)) base = `_${base || "留白"}`
+  if (!base || WINDOWS_RESERVED.test(base)) base = `_${base || tr("留白")}`
   return `${base}${suffix}`
 }
 
@@ -424,13 +425,13 @@ function cloneCaptureNode(
 ): CaptureInfo {
   renderNow?.()
   const doc = preview.contentDocument
-  if (!doc) throw new Error("预览未就绪")
+  if (!doc) throw new Error(tr("预览未就绪"))
   const target = doc.getElementById("poster") ?? doc.body
   // Layout dimensions are the capture source of truth. WebKit can report a
   // transformed rect for iframed content; offsetWidth/Height stay stable.
   const width = target.offsetWidth || Math.ceil(target.getBoundingClientRect().width)
   const height = target.offsetHeight || Math.ceil(target.getBoundingClientRect().height)
-  if (width < 20 || height < 20) throw new Error("无法读取画布尺寸")
+  if (width < 20 || height < 20) throw new Error(tr("无法读取画布尺寸"))
 
   const clone = target.cloneNode(true) as HTMLElement
   const root = doc.documentElement
@@ -511,7 +512,7 @@ function svgToCanvas(svg: string, width: number, height: number) {
     const timer = setTimeout(() => {
       if (!done) {
         done = true
-        reject(new Error("光栅化超时"))
+        reject(new Error(tr("光栅化超时")))
       }
     }, 8000)
     image.onload = () => {
@@ -523,7 +524,7 @@ function svgToCanvas(svg: string, width: number, height: number) {
         canvas.width = width
         canvas.height = height
         const context = canvas.getContext("2d")
-        if (!context) throw new Error("无法创建画布")
+        if (!context) throw new Error(tr("无法创建画布"))
         context.fillStyle = "#ffffff"
         context.fillRect(0, 0, width, height)
         context.drawImage(image, 0, 0, width, height)
@@ -536,16 +537,30 @@ function svgToCanvas(svg: string, width: number, height: number) {
       if (done) return
       done = true
       clearTimeout(timer)
-      reject(new Error("光栅化失败（可能是滤镜或字体不受支持）"))
+      reject(new Error(tr("光栅化失败（可能是滤镜或字体不受支持）")))
     }
     image.src = url
   })
+}
+
+export class ExportCancelled extends Error {
+  constructor() {
+    super(tr("已取消导出"))
+    this.name = "ExportCancelled"
+  }
+}
+
+// Central cancellation check. Each export calls this at every unit of work so
+// a long batch/video run can stop promptly without leaking encoders or blobs.
+function throwIfCancelled(signal: AbortSignal | undefined) {
+  if (signal?.aborted) throw new ExportCancelled()
 }
 
 interface ExportCallbacks {
   setProgress: (value: number) => void
   setStatus: (message: string) => void
   toast: (message: string) => void
+  signal?: AbortSignal
 }
 
 interface PngOptions extends ExportCallbacks {
@@ -577,7 +592,7 @@ async function capturePngBlob(
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png")
     })
-    if (!blob) throw new Error("生成 PNG 失败")
+    if (!blob) throw new Error(tr("生成 PNG 失败"))
     return { blob, width: canvas.width, height: canvas.height }
   } finally {
     info?.holder.remove()
@@ -586,15 +601,16 @@ async function capturePngBlob(
 
 export async function exportPng(options: PngOptions) {
   const { preview, templateKey, title, targetWidth, renderNow, hasShots } = options
-  if (!preview) throw new Error("预览未就绪")
-  if (!hasShots) throw new Error("先添加素材")
+  if (!preview) throw new Error(tr("预览未就绪"))
+  if (!hasShots) throw new Error(tr("先添加素材"))
+  throwIfCancelled(options.signal)
 
-  options.setStatus("正在渲染…")
+  options.setStatus(tr("正在渲染…"))
   options.setProgress(0.2)
   const { blob, width, height } = await capturePngBlob(preview, templateKey, targetWidth, renderNow)
   downloadBlob(blob, exportName(title, ".png"))
-  options.setStatus(`PNG 已导出：${width} × ${height}`)
-  options.toast("PNG 已导出")
+  options.setStatus(tr("PNG 已导出：{width} × {height}", { width, height }))
+  options.toast(tr("PNG 已导出"))
   options.setProgress(1)
 }
 
@@ -620,10 +636,10 @@ export async function exportBatchZip(options: BatchOptions) {
     preview, template, groups, title, targetWidth, renderGroup, restore,
     includePng, includeVideo, duration, fps, quality, buildVideoPayload,
   } = options
-  if (!preview) throw new Error("预览未就绪")
-  if (!groups.length) throw new Error("先添加素材")
-  if (!includePng && !includeVideo) throw new Error("至少选择一种批量格式")
-  if (includeVideo && !videoSupported()) throw new Error("此浏览器不支持视频录制")
+  if (!preview) throw new Error(tr("预览未就绪"))
+  if (!groups.length) throw new Error(tr("先添加素材"))
+  if (!includePng && !includeVideo) throw new Error(tr("至少选择一种批量格式"))
+  if (includeVideo && !videoSupported()) throw new Error(tr("此浏览器不支持视频录制"))
 
   const files: Array<{ name: string; data: Blob }> = []
   const perGroup = Number(includePng) + Number(includeVideo)
@@ -635,12 +651,13 @@ export async function exportBatchZip(options: BatchOptions) {
 
   try {
     for (let index = 0; index < groups.length; index += 1) {
+      throwIfCancelled(options.signal)
       const group = groups[index]
-      const groupLabel = `第 ${index + 1} / ${groups.length} 组`
+      const groupLabel = tr("第 {index} / {total} 组", { index: index + 1, total: groups.length })
       const suffix = groups.length > 1 ? `-${String(index + 1).padStart(2, "0")}` : ""
 
       if (includePng) {
-        options.setStatus(`${groupLabel} · 正在渲染 PNG…`)
+        options.setStatus(tr("{group} · 正在渲染 PNG…", { group: groupLabel }))
         // renderGroup pushes the batch payload into the iframe; pass a no-op to
         // cloneCaptureNode because the DOM is already showing this batch.
         renderGroup(group)
@@ -664,6 +681,7 @@ export async function exportBatchZip(options: BatchOptions) {
           setProgress: mark,
           setStatus: (message) => options.setStatus(`${groupLabel} · ${message}`),
           toast: () => {},
+          signal: options.signal,
         })
         files.push({ name: exportName(title, `${suffix}.${result.extension}`), data: result.blob })
         videoCount += 1
@@ -672,15 +690,18 @@ export async function exportBatchZip(options: BatchOptions) {
       }
     }
 
-    options.setStatus(`正在打包 ${files.length} 个文件…`)
+    throwIfCancelled(options.signal)
+    options.setStatus(tr("正在打包 {count} 个文件…", { count: files.length }))
     const zip = await createZip(files)
-    downloadBlob(zip, exportName(title, " 批量.zip"))
+    downloadBlob(zip, exportName(title, tr(" 批量.zip")))
     const summary = [
-      pngCount ? `${pngCount} 张图片` : "",
-      videoCount ? `${videoCount} 段视频` : "",
+      pngCount ? tr("{count} 张图片", { count: pngCount }) : "",
+      videoCount ? tr("{count} 段视频", { count: videoCount }) : "",
     ].filter(Boolean).join(" · ")
-    options.setStatus(`批量导出完成：${summary} · ${(zip.size / 1048576).toFixed(1)} MB`)
-    options.toast(`已导出 ${files.length} 个文件`)
+    options.setStatus(
+      tr("批量导出完成：{summary} · {size} MB", { summary, size: (zip.size / 1048576).toFixed(1) }),
+    )
+    options.toast(tr("已导出 {count} 个文件", { count: files.length }))
     options.setProgress(1)
   } finally {
     restore()
@@ -714,11 +735,11 @@ async function recordVideoOnce(
   forceEngine?: VideoEngine,
 ): Promise<VideoResult> {
   const { preview, template, shots, duration, fps, quality } = options
-  if (!preview) throw new Error("预览未就绪")
-  if (!shots.length) throw new Error("先添加素材")
+  if (!preview) throw new Error(tr("预览未就绪"))
+  if (!shots.length) throw new Error(tr("先添加素材"))
 
   const engine = forceEngine ?? videoEngine()
-  if (!engine) throw new Error("此浏览器不支持视频录制，可改用 PNG 导出")
+  if (!engine) throw new Error(tr("此浏览器不支持视频录制，可改用 PNG 导出"))
   const mime = supportedVideoType()
 
   const win = preview.contentWindow as (Window & {
@@ -726,13 +747,14 @@ async function recordVideoOnce(
     ReedenShareTemplate?: { render: (payload: StudioPayload) => void }
   }) | null
   if (!win?.Reeden?.seekAnimation || !win.ReedenShareTemplate) {
-    throw new Error("当前模板没有可动的时间轴")
+    throw new Error(tr("当前模板没有可动的时间轴"))
   }
 
-  options.setStatus("准备素材…")
+  options.setStatus(tr("准备素材…"))
   const used = shots.slice(0, template.count).map((shot) => ({ ...shot }))
   const neededWidth = Math.min(1400, Math.round(560 * quality))
   for (const shot of used) {
+    throwIfCancelled(options.signal)
     if (!shot.small) shot.small = await smallImage(shot.data, neededWidth)
   }
 
@@ -754,7 +776,7 @@ async function recordVideoOnce(
     canvas.width = width
     canvas.height = height
     const context = canvas.getContext("2d")
-    if (!context) throw new Error("无法创建录制画布")
+    if (!context) throw new Error(tr("无法创建录制画布"))
 
     // --- Encoder setup ------------------------------------------------------
     // WebCodecs: encode every rendered frame directly into an MP4 muxer. No
@@ -783,7 +805,7 @@ async function recordVideoOnce(
       if (!choice) {
         // VideoEncoder exists but no usable profile: fall back if possible.
         if (!mime || !mediaRecorderSupported()) {
-          throw new Error("此浏览器不支持 H.264 视频编码，可改用 PNG 导出")
+          throw new Error(tr("此浏览器不支持 H.264 视频编码，可改用 PNG 导出"))
         }
       } else {
         muxTarget = new ArrayBufferTarget()
@@ -812,7 +834,7 @@ async function recordVideoOnce(
 
     if (!encoder) {
       if (!mime || !mediaRecorderSupported()) {
-        throw new Error("此浏览器不支持视频录制，可改用 PNG 导出")
+        throw new Error(tr("此浏览器不支持视频录制，可改用 PNG 导出"))
       }
       stream = canvas.captureStream(0)
       let track = stream.getVideoTracks()[0] as
@@ -863,6 +885,7 @@ async function recordVideoOnce(
 
     try {
       for (let index = 0; index < total; index += 1) {
+        throwIfCancelled(options.signal)
         if (encoderError) failEncode(encoderError)
         const progress = index / (total - 1 || 1)
         win.Reeden!.seekAnimation!(progress)
@@ -910,7 +933,7 @@ async function recordVideoOnce(
           // Encoder failures must reach the retry layer, never be counted as a
           // harmless rasterization miss.
           if (error instanceof VideoEncodeFailure) throw error
-          if (!lastGood) throw new Error("首帧渲染失败")
+          if (!lastGood) throw new Error(tr("首帧渲染失败"))
           failures += 1
         } finally {
           frame.holder.remove()
@@ -918,13 +941,19 @@ async function recordVideoOnce(
         }
         options.setProgress((index + 1) / total)
         options.setStatus(
-          `${encoder ? "编码" : "录制"}中 ${index + 1} / ${total} 帧 · ${((performance.now() - startedAt) / 1000).toFixed(1)}s`,
+          tr("{mode}中 {index} / {total} 帧 · {seconds}s", {
+            mode: tr(encoder ? "编码" : "录制"),
+            index: index + 1,
+            total,
+            seconds: ((performance.now() - startedAt) / 1000).toFixed(1),
+          }),
         )
       }
     } finally {
       frame?.holder.remove()
     }
 
+    throwIfCancelled(options.signal)
     if (encoder && muxer && muxTarget) {
       try {
         await encoder.flush()
@@ -944,7 +973,7 @@ async function recordVideoOnce(
       }
     }
 
-    if (!recorder || !recordingStarted) throw new Error("没有可录制的帧")
+    if (!recorder || !recordingStarted) throw new Error(tr("没有可录制的帧"))
     await new Promise((resolve) => setTimeout(resolve, Math.max(120, frameMs * 2)))
     recorder.stop()
     await stopped
@@ -982,12 +1011,16 @@ async function recordVideo(options: VideoOptions): Promise<VideoResult> {
     } catch (error) {
       if (!(error instanceof VideoEncodeFailure)) throw error
       if (!supportedVideoType() || !mediaRecorderSupported()) throw error
-      options.setStatus("硬件编码失败，切换兼容录制模式…")
+      options.setStatus(tr("硬件编码失败，切换兼容录制模式…"))
       try {
         return await recordVideoOnce(options, "mediarecorder")
       } catch (fallbackError) {
         // Surface a clear, localized message instead of the raw WebKit error.
-        throw new Error(`视频编码失败，兼容模式也未成功：${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`)
+        throw new Error(
+          tr("视频编码失败，兼容模式也未成功：{error}", {
+            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          }),
+        )
       }
     }
   }
@@ -998,9 +1031,15 @@ export async function exportVideo(options: VideoOptions & { title: string }) {
   const result = await recordVideo(options)
   downloadBlob(result.blob, exportName(options.title, `.${result.extension}`))
   options.setStatus(
-    `已导出 ${result.extension.toUpperCase()}：${result.width} × ${result.height} · ${(result.blob.size / 1048576).toFixed(1)} MB${
-      result.failures ? `（${result.failures} 帧沿用上一帧）` : ""
-    }`,
+    tr("已导出 {ext}：{width} × {height} · {size} MB{extra}", {
+      ext: result.extension.toUpperCase(),
+      width: result.width,
+      height: result.height,
+      size: (result.blob.size / 1048576).toFixed(1),
+      extra: result.failures
+        ? tr("（{count} 帧沿用上一帧）", { count: result.failures })
+        : "",
+    }),
   )
-  options.toast("视频已导出")
+  options.toast(tr("视频已导出"))
 }

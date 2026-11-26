@@ -1,3 +1,4 @@
+import { tr } from "@/i18n"
 import { PAGE_NAME } from "./constants"
 import type { Colors } from "./constants"
 import { paperColorsForTone } from "./palette"
@@ -18,6 +19,7 @@ interface BuildPayloadOptions {
   tone: Tone
   meta: ThemeMeta
   smallScale?: boolean
+  lang?: "zh" | "en"
 }
 
 export function buildPayload({
@@ -28,6 +30,7 @@ export function buildPayload({
   tone,
   meta,
   smallScale = false,
+  lang = "zh",
 }: BuildPayloadOptions): StudioPayload {
   const used = shots.slice(0, template?.count ?? 6)
   const resolved: ParamValues = {}
@@ -66,7 +69,7 @@ export function buildPayload({
         manual ||
         pageName ||
         (fileNameLike ? "" : shot.label || "") ||
-        `截图 ${index + 1}`
+        tr("截图 {index}", { index: index + 1 })
       return {
         id: `d${index}`,
         image: smallScale && shot.small ? shot.small : shot.data,
@@ -80,5 +83,6 @@ export function buildPayload({
     params: resolved,
     appearance: {},
     tone,
+    lang,
   }
 }

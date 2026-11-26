@@ -85,6 +85,7 @@ export interface StudioPayload {
   params: ParamValues
   appearance: Record<string, never>
   tone: Tone
+  lang?: "zh" | "en"
 }
 
 export interface PaletteAnalysis {

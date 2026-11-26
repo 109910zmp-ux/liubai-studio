@@ -1,3 +1,4 @@
+import { tr } from "@/i18n"
 import metadata from "../data/templates.meta.json"
 import themeBase from "../templates/theme-base.html?raw"
 import type { Template, TemplateParam, TemplateSlot } from "./types"
@@ -70,7 +71,9 @@ export function evalWhen(
       const matched = /^param\.([A-Za-z0-9_]+)(?:=(.*))?$/.exec(key)
       if (!matched) {
         if (import.meta.env.DEV) {
-          console.warn(`[templates] 无法识别的 when 条件: "${part}"，已按显示处理`)
+          console.warn(
+            tr("无法识别的 when 条件: \"{part}\"，已按显示处理", { part }),
+          )
         }
         return true
       }

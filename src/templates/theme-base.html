@@ -25,19 +25,19 @@
 <meta data-red-param="param.ledgeColor" data-red-type="color" data-red-label="展台颜色（留空自动）" data-red-default="" data-red-group="展映" data-red-when="param.enable3D">
 <meta data-red-param="param.showDots" data-red-type="switch" data-red-label="页码圆点（关则显示速度线）" data-red-default="false" data-red-group="展映" data-red-when="param.enable3D">
 <meta data-red-param="param.showCapsNum" data-red-type="switch" data-red-label="显示展签序号（I / II / III）" data-red-default="true" data-red-group="展映" data-red-when="param.enable3D">
-<meta data-red-param="param.deep3D" data-red-type="switch" data-red-label="展开细调（关则用布局调好的值）" data-red-default="false" data-red-group="展开 · 细调">
+<meta data-red-param="param.deep3D" data-red-type="switch" data-red-label="展开细调（关则用布局调好的值）" data-red-default="false" data-red-group="展映">
 <!-- ============ 展开 · 细调（分三组：空间 / 动效 / 卡片） ============ -->
-<meta data-red-param="param.chordGroup" data-red-type="select" data-red-label="空间" data-red-options="def:跟随布局（推荐）,angle:调外张角度,depth:调景深,spacing:调间距,float:调浮动,pitch:调俯仰,all:全部手调" data-red-default="def" data-red-group="空间" data-red-when="param.deep3D">
-<meta data-red-param="param.angle" data-red-type="range" data-red-label="卡片外张角度（°）" data-red-min="0" data-red-max="60" data-red-step="1" data-red-default="32" data-red-group="空间" data-red-when="param.chordGroup=angle|all">
-<meta data-red-param="param.depth" data-red-type="range" data-red-label="空间景深" data-red-min="0" data-red-max="180" data-red-step="5" data-red-default="70" data-red-group="空间" data-red-when="param.chordGroup=depth|all">
-<meta data-red-param="param.spacing" data-red-type="range" data-red-label="卡片间距" data-red-min="0" data-red-max="100" data-red-step="2" data-red-default="28" data-red-group="空间" data-red-when="param.chordGroup=spacing|all">
-<meta data-red-param="param.floatAmp" data-red-type="range" data-red-label="浮动幅度（px）" data-red-min="0" data-red-max="10" data-red-step="0.5" data-red-default="2.6" data-red-group="空间" data-red-when="param.chordGroup=float|all">
-<meta data-red-param="param.pitch" data-red-type="range" data-red-label="整组俯仰（°，正为俯视）" data-red-min="-16" data-red-max="16" data-red-step="1" data-red-default="0" data-red-group="空间" data-red-when="param.chordGroup=pitch|all">
+<meta data-red-param="param.chordGroup" data-red-type="select" data-red-label="空间" data-red-options="def:跟随布局（推荐）,angle:调外张角度,depth:调景深,spacing:调间距,float:调浮动,pitch:调俯仰,all:全部手调" data-red-default="def" data-red-group="空间与动效" data-red-when="param.deep3D">
+<meta data-red-param="param.angle" data-red-type="range" data-red-label="卡片外张角度（°）" data-red-min="0" data-red-max="60" data-red-step="1" data-red-default="32" data-red-group="空间与动效" data-red-when="param.chordGroup=angle|all">
+<meta data-red-param="param.depth" data-red-type="range" data-red-label="空间景深" data-red-min="0" data-red-max="180" data-red-step="5" data-red-default="70" data-red-group="空间与动效" data-red-when="param.chordGroup=depth|all">
+<meta data-red-param="param.spacing" data-red-type="range" data-red-label="卡片间距" data-red-min="0" data-red-max="100" data-red-step="2" data-red-default="28" data-red-group="空间与动效" data-red-when="param.chordGroup=spacing|all">
+<meta data-red-param="param.floatAmp" data-red-type="range" data-red-label="浮动幅度（px）" data-red-min="0" data-red-max="10" data-red-step="0.5" data-red-default="2.6" data-red-group="空间与动效" data-red-when="param.chordGroup=float|all">
+<meta data-red-param="param.pitch" data-red-type="range" data-red-label="整组俯仰（°，正为俯视）" data-red-min="-16" data-red-max="16" data-red-step="1" data-red-default="0" data-red-group="空间与动效" data-red-when="param.chordGroup=pitch|all">
 
-<meta data-red-param="param.motionGroup" data-red-type="select" data-red-label="动效" data-red-options="def:跟随布局（推荐）,curve:改推进手感,fog:改远近层次,all:两者都改" data-red-default="def" data-red-group="动效" data-red-when="param.deep3D">
-<meta data-red-param="param.seekCurve" data-red-type="select" data-red-label="推进手感" data-red-options="mode:跟随布局,outExpo:急停甩入,outCubic:柔和减速,outBack:带一点回弹,inOutCubic:缓入缓出,linear:匀速" data-red-default="mode" data-red-group="动效" data-red-when="param.motionGroup=curve|all">
-<meta data-red-param="param.depthFog" data-red-type="range" data-red-label="远处雾化（%）" data-red-min="0" data-red-max="80" data-red-step="5" data-red-default="30" data-red-group="动效" data-red-when="param.motionGroup=fog|all">
-<meta data-red-param="param.focusBlur" data-red-type="range" data-red-label="非焦点虚化（px）" data-red-min="0" data-red-max="4" data-red-step="0.5" data-red-default="0.8" data-red-group="动效" data-red-when="param.motionGroup=fog|all">
+<meta data-red-param="param.motionGroup" data-red-type="select" data-red-label="动效" data-red-options="def:跟随布局（推荐）,curve:改推进手感,fog:改远近层次,all:两者都改" data-red-default="def" data-red-group="空间与动效" data-red-when="param.deep3D">
+<meta data-red-param="param.seekCurve" data-red-type="select" data-red-label="推进手感" data-red-options="mode:跟随布局,outExpo:急停甩入,outCubic:柔和减速,outBack:带一点回弹,inOutCubic:缓入缓出,linear:匀速" data-red-default="mode" data-red-group="空间与动效" data-red-when="param.motionGroup=curve|all">
+<meta data-red-param="param.depthFog" data-red-type="range" data-red-label="远处雾化（%）" data-red-min="0" data-red-max="80" data-red-step="5" data-red-default="30" data-red-group="空间与动效" data-red-when="param.motionGroup=fog|all">
+<meta data-red-param="param.focusBlur" data-red-type="range" data-red-label="非焦点虚化（px）" data-red-min="0" data-red-max="4" data-red-step="0.5" data-red-default="0.8" data-red-group="空间与动效" data-red-when="param.motionGroup=fog|all">
 
 
 <!-- ============ 水印与质感 ============ -->
@@ -50,14 +50,14 @@
 
 <!-- ============ 外观 ============ -->
 
-<meta data-red-param="param.customEdge" data-red-type="switch" data-red-label="自定义边缘" data-red-default="false" data-red-group="自定义" data-red-when="param.deep3D">
-<meta data-red-param="param.borderWidth" data-red-type="range" data-red-label="边缘宽度（px）" data-red-min="2" data-red-max="14" data-red-step="1" data-red-default="4" data-red-group="自定义" data-red-when="param.customEdge">
-<meta data-red-param="param.borderColor" data-red-type="color" data-red-label="边缘颜色（留空自动）" data-red-default="" data-red-group="自定义" data-red-when="param.customEdge">
-<meta data-red-param="param.glassOpacity" data-red-type="range" data-red-label="玻璃通透度（%）" data-red-min="6" data-red-max="60" data-red-step="2" data-red-default="20" data-red-group="自定义" data-red-when="param.customEdge">
-<meta data-red-param="param.glassSheen" data-red-type="range" data-red-label="玻璃高光（%）" data-red-min="0" data-red-max="100" data-red-step="5" data-red-default="55" data-red-group="自定义" data-red-when="param.customEdge">
-<meta data-red-param="param.shadowSoft" data-red-type="range" data-red-label="投影柔度（px）" data-red-min="0" data-red-max="40" data-red-step="2" data-red-default="18" data-red-group="自定义" data-red-when="param.customEdge">
+<meta data-red-param="param.customEdge" data-red-type="switch" data-red-label="自定义边缘" data-red-default="false" data-red-group="边缘与玻璃" data-red-when="param.deep3D">
+<meta data-red-param="param.borderWidth" data-red-type="range" data-red-label="边缘宽度（px）" data-red-min="2" data-red-max="14" data-red-step="1" data-red-default="4" data-red-group="边缘与玻璃" data-red-when="param.customEdge">
+<meta data-red-param="param.borderColor" data-red-type="color" data-red-label="边缘颜色（留空自动）" data-red-default="" data-red-group="边缘与玻璃" data-red-when="param.customEdge">
+<meta data-red-param="param.glassOpacity" data-red-type="range" data-red-label="玻璃通透度（%）" data-red-min="6" data-red-max="60" data-red-step="2" data-red-default="20" data-red-group="边缘与玻璃" data-red-when="param.customEdge">
+<meta data-red-param="param.glassSheen" data-red-type="range" data-red-label="玻璃高光（%）" data-red-min="0" data-red-max="100" data-red-step="5" data-red-default="55" data-red-group="边缘与玻璃" data-red-when="param.customEdge">
+<meta data-red-param="param.shadowSoft" data-red-type="range" data-red-label="投影柔度（px）" data-red-min="0" data-red-max="40" data-red-step="2" data-red-default="18" data-red-group="边缘与玻璃" data-red-when="param.customEdge">
 
-<meta data-red-param="param.watermark" data-red-type="select" data-red-label="水印" data-red-options="off:不显示,on:显示水印" data-red-default="off" data-red-group="水印与质感">
+<meta data-red-param="param.watermark" data-red-type="switch" data-red-label="水印" data-red-options="off,on" data-red-default="off" data-red-group="水印与质感">
 <meta data-red-param="param.watermarkText" data-red-type="text" data-red-label="水印文字" data-red-placeholder="留空用「主题名 @分享者」" data-red-default="" data-red-group="水印与质感" data-red-when="param.watermark=on">
 <meta data-red-param="param.watermarkFont" data-red-type="select" data-red-label="水印字体" data-red-options="auto:跟随模板标题,song:宋体 · 思源宋体,kai:楷体,yuan:圆体 · 苹方圆,hei:黑体 · 苹方,serif:西文衬线,mono:等宽" data-red-default="auto" data-red-group="水印与质感" data-red-when="param.watermark=on">
 <meta data-red-param="param.watermarkFontFile" data-red-type="font" data-red-label="自定义水印字体" data-red-placeholder="上传 .ttf/.otf/.woff 字体" data-red-default="" data-red-group="水印与质感" data-red-when="param.watermark=on">
@@ -774,7 +774,7 @@ html[data-param-mask-style="crosshatch"] .card3d::after{
 
     <aside class="seal" id="seal">
       <span class="who" id="sealWho"></span>
-      <span class="note">閲覧用</span>
+      <span class="note" id="sealNote">閲覧用</span>
     </aside>
   </div>
 </main>
@@ -782,6 +782,10 @@ html[data-param-mask-style="crosshatch"] .card3d::after{
 <script>
 (function(){
 'use strict';
+
+/* Interface language for the poster's own placeholder copy. */
+var UI_LANG = 'zh';
+function uiText(zh, en){ return UI_LANG === 'en' ? en : zh; }
 
 /* ============================================================
    3D 舞台全局状态
@@ -1167,7 +1171,7 @@ function build3DStage(trio,P,PR,capData,anyCJK){
   if(!ST.n){
     var emptyEl = document.createElement('div');
     emptyEl.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:12px;letter-spacing:.06em;';
-    emptyEl.textContent = '尚未选择主题截图';
+    emptyEl.textContent = uiText('尚未选择主题截图', 'No theme screenshots yet');
     trio.appendChild(emptyEl);
     ST.cards = []; ST.dots = [];
     return;
@@ -1276,7 +1280,7 @@ function build3DStage(trio,P,PR,capData,anyCJK){
     } else {
       var ph = document.createElement('div');
       ph.className = 'empty';
-      ph.textContent = '未选择';
+      ph.textContent = uiText('未选择', 'Not selected');
       card.appendChild(ph);
       imgPending--;
     }
@@ -1330,7 +1334,7 @@ function build3DStage(trio,P,PR,capData,anyCJK){
       pg.type = 'button';
       pg.className = 'pg';
       pg.dataset.vi = String(pj);
-      pg.setAttribute('aria-label', '第 ' + (pj + 1) + ' 页');
+      pg.setAttribute('aria-label', uiText('第 ' + (pj + 1) + ' 页', 'Page ' + (pj + 1)));
       ST.pgSel.appendChild(pg);
       ST.pgDots.push(pg);
     }
@@ -1961,6 +1965,9 @@ function seekAnimation(progress){
    ============================================================ */
 function render(payload){
   payload = payload || {};
+  UI_LANG = payload.lang === 'en' ? 'en' : 'zh';
+  var sealNote = document.getElementById('sealNote');
+  if (sealNote) sealNote.textContent = uiText('閲覧用', 'PREVIEW');
   stop3DLoop();
   ST.active = false;
 
@@ -2272,15 +2279,15 @@ function render(payload){
         var ph = document.createElement('div');
         ph.className = 'empty';
         /* 空位显示「页面名 + 未选择」，比干巴巴的「未选择」更能提示这一格是什么 */
-        var _pn = PAGE_ZH[it.page] || PAGE_EN[it.page] || '';
+        var _pn = (UI_LANG === 'en' ? PAGE_EN[it.page] : PAGE_ZH[it.page]) || PAGE_ZH[it.page] || PAGE_EN[it.page] || '';
         var _lbl = document.createElement('span');
         _lbl.className = 'empty-lbl';
-        _lbl.textContent = _pn || '未选择';
+        _lbl.textContent = _pn || uiText('未选择', 'Not selected');
         ph.appendChild(_lbl);
         if(_pn){
           var _sub = document.createElement('span');
           _sub.className = 'empty-sub';
-          _sub.textContent = '未选择';
+          _sub.textContent = uiText('未选择', 'Not selected');
           ph.appendChild(_sub);
         }
         fig.appendChild(ph);
@@ -2512,7 +2519,7 @@ function wmFontStack(mode, P){
   return f ? ('"' + f + '",Georgia,"Songti SC",serif') : 'Georgia,"Songti SC",serif';
 }
 
-/* 水印开关：新参数是 select（off/on），旧数据是 switch（布尔），两种都认 */
+/* 水印开关：新参数是 switch（off/on 字符串），旧数据是布尔，两种都认 */
 function wmEnabled(PR){
   if(!PR) return false;
   var v = PR.watermark;
@@ -2663,7 +2670,7 @@ window.ReedenShareTemplate = {
     try{ render(payload); }
     catch(e){
       var p = document.getElementById('poster');
-      if(p && !p.textContent.trim()) p.textContent = '主题预览';
+      if(p && !p.textContent.trim()) p.textContent = uiText('主题预览', 'Theme preview');
     }
   },
   seekAnimation: seekAnimation

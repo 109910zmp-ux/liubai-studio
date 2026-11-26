@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -14,48 +15,121 @@ import { Switch } from "@/components/ui/switch"
 import type { StudioApi } from "@/hooks/useStudio"
 import { hexNorm } from "@/lib/color"
 import { STYLE_PRESETS } from "@/lib/presets"
-import type { TemplateParam } from "@/lib/types"
+import type { Template, TemplateParam } from "@/lib/types"
 import { cn } from "cn"
 
 // Core groups stay open; fine-tuning groups start collapsed to cut down the
-// 44-control wall. Users can still expand anything, and the choice persists.
+// 44-control wall. Users can still expand anything, and the choice persists —
+// per template, so a collapse in one layout does not leak into another.
 const CORE_GROUPS = new Set(["展映", "外观", "卡片外观", "图文排版"])
-const COLLAPSED_KEY = "liubai-param-collapsed-groups"
+const COLLAPSED_KEY_PREFIX = "liubai-param-collapsed-groups:"
 
-function readCollapsed(): Record<string, boolean> | null {
-  try {
-    const raw = localStorage.getItem(COLLAPSED_KEY)
-    if (raw === null) return null
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === "object" ? parsed : null
-  } catch {
-    return null
-  }
+type CollapsedState = { key: string; values: Record<string, boolean> }
+
+function collapsedKey(templateKey: string) {
+  return `${COLLAPSED_KEY_PREFIX}${templateKey}`
 }
 
-export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: Array<{ name: string; items: TemplateParam[] }> }) {
-  const [query, setQuery] = useState("")
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    const saved = readCollapsed()
-    if (saved) return saved
-    const initial: Record<string, boolean> = {}
-    groups.forEach((group) => {
-      if (!CORE_GROUPS.has(group.name)) initial[group.name] = true
-    })
-    return initial
+function readCollapsed(templateKey: string): Record<string, boolean> {
+  if (!templateKey) return {}
+  try {
+    const raw = localStorage.getItem(collapsedKey(templateKey))
+    if (!raw) return {}
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed && typeof parsed === "object") return parsed as Record<string, boolean>
+  } catch {
+    // Storage may be unavailable; collapse state is a convenience only.
+  }
+  return {}
+}
+
+// Groups the stored snapshot has never seen fall back to the core-group rule
+// instead of being treated as collapsed/undefined — new template params stay
+// discoverable without silently expanding every fine-tuning group.
+function isGroupOpen(values: Record<string, boolean>, name: string) {
+  return name in values ? !values[name] : CORE_GROUPS.has(name)
+}
+
+// Turn a `when` expression into a short hint explaining why a param is hidden,
+// e.g. "需先开启「水印」" — so a searched-but-hidden control is actionable.
+function hiddenReason(
+  expression: string | undefined,
+  tpl: Template | null,
+  t: (source: string, vars?: Record<string, string | number>) => string,
+) {
+  if (!expression) return ""
+  const parts = expression.split(/\s*\+\s*/).filter(Boolean)
+  const reasons = parts.map((part) => {
+    const test = part.trim()
+    const negated = test.startsWith("!")
+    const key = negated ? test.slice(1) : test
+    const matched = /^param\.([A-Za-z0-9_]+)(?:=(.*))?$/.exec(key)
+    if (!matched) return t("前置条件未满足")
+    const param = tpl?.params.find((item) => item.key === matched[1])
+    const label = t(param?.label ?? matched[1])
+    if (matched[2] == null) return t(negated ? "关闭「{label}」" : "开启「{label}」", { label })
+    if (param?.type === "switch" && /^(on|true)$/.test(matched[2])) {
+      return t(negated ? "关闭「{label}」" : "开启「{label}」", { label })
+    }
+    if (param?.type === "switch" && /^(off|false)$/.test(matched[2])) {
+      return t(negated ? "开启「{label}」" : "关闭「{label}」", { label })
+    }
+    return t("将「{label}」设为 {value}", { label, value: matched[2].replace(/\|/g, "/") })
   })
+  return reasons.join("，")
+}
+
+export function ParamsSection({
+  studio,
+  groups,
+}: {
+  studio: StudioApi
+  groups: Array<{ name: string; label?: string; items: TemplateParam[] }>
+}) {
+  const [query, setQuery] = useState("")
+  const { t, language } = useI18n()
+  const templateKey = studio.currentTpl?.key ?? ""
+  const [state, setState] = useState<CollapsedState>(() => ({
+    key: templateKey,
+    values: readCollapsed(templateKey),
+  }))
+  // Use the snapshot matching the current template on the first render after a
+  // switch; the effect below persists the migrated snapshot on the next tick.
+  const collapsed = state.key === templateKey ? state.values : readCollapsed(templateKey)
 
   useEffect(() => {
+    if (state.key !== templateKey) {
+      setState({ key: templateKey, values: readCollapsed(templateKey) })
+      return
+    }
+    if (!templateKey) return
     try {
-      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed))
+      localStorage.setItem(collapsedKey(templateKey), JSON.stringify(collapsed))
     } catch {
       // Storage may be unavailable; collapse state is a convenience only.
     }
-  }, [collapsed])
+  }, [collapsed, state.key, templateKey])
 
   const q = query.trim().toLowerCase()
+  const visibleCount = useMemo(
+    () => groups.reduce(
+      (sum, group) => sum + group.items.filter((param) => studio.visibleParam(param.when)).length,
+      0,
+    ),
+    [groups, studio.params, studio.currentTpl],
+  )
   const filtered = useMemo(() => {
-    if (!q) return groups
+    // Without a query keep the original behavior: hidden params stay hidden.
+    // With a query, include hidden matches so users can discover controls gated
+    // behind a switch (e.g. the watermark font before watermark is enabled).
+    if (!q) {
+      return groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((param) => studio.visibleParam(param.when)),
+        }))
+        .filter((group) => group.items.length > 0)
+    }
     return groups
       .map((group) => ({
         ...group,
@@ -67,13 +141,19 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
         ),
       }))
       .filter((group) => group.items.length > 0)
-  }, [groups, q])
+  }, [groups, q, studio.params, studio.currentTpl, language])
 
-  const totalCount = groups.reduce((sum, group) => sum + group.items.length, 0)
   const matchedCount = filtered.reduce((sum, group) => sum + group.items.length, 0)
 
   function toggle(name: string) {
-    setCollapsed((current) => ({ ...current, [name]: !current[name] }))
+    // Values store "collapsed"; isGroupOpen returns "expanded". Flipping an
+    // expanded group means storing collapsed=true, and vice versa — so the
+    // stored flag is exactly the current expanded state.
+    const currentlyOpen = isGroupOpen(collapsed, name)
+    setState({
+      key: templateKey,
+      values: { ...collapsed, [name]: currentlyOpen },
+    })
   }
 
   function setAll(open: boolean) {
@@ -81,16 +161,16 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
     groups.forEach((group) => {
       next[group.name] = !open
     })
-    setCollapsed(next)
+    setState({ key: templateKey, values: next })
   }
 
-  if (!studio.currentTpl) return <p className="hint-text">先选择一套模板。</p>
-  if (!groups.length) return <p className="hint-text">当前没有可用参数。</p>
+  if (!studio.currentTpl) return <p className="hint-text">{t("先选择一套模板。")}</p>
+  if (!groups.length) return <p className="hint-text">{t("当前没有可用参数。")}</p>
 
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="section-subtitle">风格预设</h4>
+        <h4 className="section-subtitle">{t("风格预设")}</h4>
         <div className="flex flex-wrap gap-1.5">
           {STYLE_PRESETS.map((preset) => (
             <Button
@@ -98,14 +178,14 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
               size="sm"
               variant={studio.activePreset === preset.key ? "default" : "outline"}
               className="h-7 px-2.5 text-xs"
-              title={preset.desc}
+              title={t(preset.desc)}
               onClick={() => studio.actions.applyPreset(preset.key)}
             >
-              {preset.name}
+              {t(preset.name)}
             </Button>
           ))}
         </div>
-        <p className="hint-text mt-2">一键套用整组参数；手动调整后预设状态自动取消。</p>
+        <p className="hint-text mt-2">{t("一键套用整组参数；手动调整后预设状态自动取消。")}</p>
       </div>
 
       <div>
@@ -114,14 +194,16 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索参数名或标识…"
+            placeholder={t("搜索参数名或标识…")}
             className="h-8 pl-8 text-xs"
-            aria-label="搜索参数"
+            aria-label={t("搜索参数")}
           />
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className="hint-text">
-            {q ? `匹配 ${matchedCount} 项` : `${groups.length} 组 · ${totalCount} 项`}
+            {q
+              ? t("匹配 {count} 项", { count: matchedCount })
+              : t("{count} 组 · {total} 项", { count: groups.length, total: visibleCount })}
           </span>
           <div className="flex shrink-0 gap-1">
             <Button
@@ -130,7 +212,7 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
               className="h-6 px-1.5 text-[11px]"
               onClick={() => setAll(true)}
             >
-              全部展开
+              {t("全部展开")}
             </Button>
             <Button
               size="sm"
@@ -138,14 +220,14 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
               className="h-6 px-1.5 text-[11px]"
               onClick={() => setAll(false)}
             >
-              全部收起
+              {t("全部收起")}
             </Button>
           </div>
         </div>
       </div>
 
       {filtered.map((group) => {
-        const open = q ? true : !collapsed[group.name]
+        const open = q ? true : isGroupOpen(collapsed, group.name)
         return (
           <div key={group.name}>
             <button
@@ -165,16 +247,26 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
               ) : (
                 <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
               )}
-              <span className="min-w-0 flex-1 truncate">{group.name}</span>
+              <span className="min-w-0 flex-1 truncate">{group.label ?? t(group.name)}</span>
               <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                 {group.items.length}
               </span>
             </button>
             {open && (
               <div className="mt-1.5 space-y-2 pl-1">
-                {group.items.map((param) => (
-                  <ParamControl key={param.key} studio={studio} param={param} />
-                ))}
+                {group.items.map((param) => {
+                  const hidden = !studio.visibleParam(param.when)
+                  return (
+                    <div key={param.key}>
+                      <ParamControl studio={studio} param={param} />
+                      {hidden ? (
+                        <p className="hint-text mt-1 pl-0.5 text-amber-600 dark:text-amber-400">
+                          {t("当前隐藏 · 需先{reason}", { reason: hiddenReason(param.when, studio.currentTpl, t) })}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -185,17 +277,35 @@ export function ParamsSection({ studio, groups }: { studio: StudioApi; groups: A
 }
 
 export function ParamControl({ studio, param }: { studio: StudioApi; param: TemplateParam }) {
+  const { t } = useI18n()
   const value = studio.paramValue(param.key) ?? param.def
   if (param.type === "switch") {
-    const checked = value === true || value === "true"
+    // Most switches persist booleans, but some template params use the
+    // on/off strings expected by the share template itself (e.g. watermark).
+    // Keep the stored format so payloads, presets and saved projects stay
+    // compatible while the control is still a single toggle.
+    const optionValues = param.options
+      .split(",")
+      .map((pair) => {
+        const divider = pair.indexOf(":")
+        return divider > 0 ? pair.slice(0, divider) : pair
+      })
+      .filter(Boolean)
+    const usesOnOff = optionValues.includes("on") && optionValues.includes("off")
+    const checked = value === true || value === "true" || value === "on"
     return (
       <div className="flex items-center gap-3" data-param-key={param.key}>
         <Switch
           checked={checked}
-          onCheckedChange={(next) => studio.actions.setParamValue(param.key, next)}
-          aria-label={param.label}
+          onCheckedChange={(next) =>
+            studio.actions.setParamValue(
+              param.key,
+              usesOnOff ? (next ? "on" : "off") : next,
+            )
+          }
+          aria-label={t(param.label)}
         />
-        <span className="field-label">{param.label}</span>
+        <span className="field-label">{t(param.label)}</span>
       </div>
     )
   }
@@ -207,18 +317,18 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
       .map((pair) => {
         const divider = pair.indexOf(":")
         return divider > 0
-          ? { value: pair.slice(0, divider), label: pair.slice(divider + 1) }
-          : { value: pair, label: pair }
+          ? { value: pair.slice(0, divider), label: t(pair.slice(divider + 1)) }
+          : { value: pair, label: t(pair) }
       })
     return (
       <div className="flex items-center gap-3" data-param-key={param.key}>
-        <span className="field-label min-w-0 flex-1 truncate">{param.label}</span>
+        <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
         <Select
           value={String(value)}
           onValueChange={(next) => studio.actions.setParamValue(param.key, String(next))}
         >
           <SelectTrigger size="sm" className="w-[190px]">
-            <SelectValue placeholder="选择" />
+            <SelectValue placeholder={t("选择")} />
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
@@ -236,7 +346,7 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
     const number = Number(value) || 0
     return (
       <div className="flex items-center gap-3" data-param-key={param.key}>
-        <span className="field-label min-w-0 flex-1 truncate">{param.label}</span>
+        <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
         <Slider
           className="w-[140px]"
           min={Number(param.min) || 0}
@@ -249,7 +359,7 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
               Array.isArray(next) ? (next[0] ?? number) : next,
             )
           }
-          aria-label={param.label}
+          aria-label={t(param.label)}
         />
         <span className="w-9 text-right font-mono text-xs text-muted-foreground">{number}</span>
       </div>
@@ -259,7 +369,7 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
   if (param.type === "color") {
     return (
       <div className="flex items-center gap-3" data-param-key={param.key}>
-        <span className="field-label min-w-0 flex-1 truncate">{param.label}</span>
+        <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
         <input
           type="color"
           className="size-7 cursor-pointer rounded-md border border-input bg-background p-0.5"
@@ -271,7 +381,7 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
           variant="outline"
           onClick={() => studio.actions.setParamValue(param.key, "")}
         >
-          自动
+          {t("自动")}
         </Button>
       </div>
     )
@@ -284,9 +394,9 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
     return (
       <div className="space-y-1.5" data-param-key={param.key}>
         <div className="flex items-center gap-3">
-          <span className="field-label min-w-0 flex-1 truncate">{param.label}</span>
+          <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
           <label className="inline-flex h-8 shrink-0 cursor-pointer items-center rounded-md border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent">
-            {hasValue ? "更换" : "选择文件"}
+            {t(hasValue ? "更换" : "选择文件")}
             <input
               type="file"
               accept={accept}
@@ -299,7 +409,7 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
                 // 避免平铺水印图过大拖慢导出。
                 const maxBytes = 6 * 1024 * 1024
                 if (!isFont && file.size > maxBytes) {
-                  studio.actions.notify("图片文件请小于 6MB")
+                  studio.actions.notify(t("图片文件请小于 6MB"))
                   return
                 }
                 const reader = new FileReader()
@@ -307,10 +417,10 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
                   const result = reader.result
                   if (typeof result === "string") {
                     studio.actions.setParamValue(param.key, result)
-                    studio.actions.notify(isFont ? "字体已载入" : "水印图片已载入")
+                    studio.actions.notify(t(isFont ? "字体已载入" : "水印图片已载入"))
                   }
                 }
-                reader.onerror = () => studio.actions.notify("文件读取失败")
+                reader.onerror = () => studio.actions.notify(t("文件读取失败"))
                 reader.readAsDataURL(file)
               }}
             />
@@ -329,13 +439,13 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
         {hasValue && !isFont && (
           <img
             src={String(value)}
-            alt="水印预览"
+            alt={t("水印预览")}
             className="ml-auto block h-10 w-10 rounded border border-border object-contain"
           />
         )}
         {hasValue && isFont && (
           <span className="ml-auto block text-right font-mono text-[10px] text-muted-foreground">
-            已载入自定义字体
+            {t("已载入自定义字体")}
           </span>
         )}
       </div>
@@ -344,11 +454,11 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
 
   return (
     <div className="flex items-center gap-3" data-param-key={param.key}>
-      <span className="field-label min-w-0 flex-1 truncate">{param.label}</span>
+      <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
       <Input
         className="max-w-[190px]"
         value={String(value ?? "")}
-        placeholder={param.placeholder}
+        placeholder={param.placeholder ? t(param.placeholder) : undefined}
         onChange={(event) => studio.actions.setParamValue(param.key, event.target.value)}
       />
     </div>

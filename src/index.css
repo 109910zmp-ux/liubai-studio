@@ -419,6 +419,13 @@ body {
   background: var(--background);
 }
 
+/* Zoom controls collapse on narrow screens — pinch/scroll still zooms the canvas. */
+.preview-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
 .preview-wrap {
   position: relative;
   display: flex;
@@ -674,6 +681,10 @@ body {
 
   .studio-main {
     height: 100%;
+  }
+
+  .preview-zoom {
+    display: none;
   }
 
   .preview-wrap {
