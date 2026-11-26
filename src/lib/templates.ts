@@ -46,7 +46,10 @@ export function paramValue(
   if (key in values) return values[key]
   const definition = template?.params.find((item) => item.key === key)
   if (!definition) return undefined
-  if (definition.type === "switch") return definition.def === "true"
+  if (definition.type === "switch") {
+    if (definition.def === "on" || definition.def === "off") return definition.def
+    return definition.def === "true"
+  }
   return definition.def
 }
 

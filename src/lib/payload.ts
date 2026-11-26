@@ -37,7 +37,12 @@ export function buildPayload({
 
   template?.params.forEach((definition) => {
     const value = definition.key in params ? params[definition.key] : definition.def
-    if (definition.type === "switch") resolved[definition.key] = value === true || value === "true"
+    // Some switches (e.g. watermark) persist "on"/"off" strings rather than
+    // booleans; keep that value intact so the template's wmEnabled() can read it.
+    if (definition.type === "switch") {
+      if (value === "on" || value === "off") resolved[definition.key] = value
+      else resolved[definition.key] = value === true || value === "true"
+    }
     else if (definition.type === "range") resolved[definition.key] = Number.parseFloat(String(value))
     else resolved[definition.key] = value
   })
