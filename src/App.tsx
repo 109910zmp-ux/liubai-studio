@@ -1,13 +1,16 @@
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import {
+  ChevronDownIcon,
   CircleHelpIcon,
   DownloadIcon,
+  FolderOpenIcon,
   MonitorIcon,
   MoonIcon,
   Redo2Icon,
   SunIcon,
   Undo2Icon,
+  UploadIcon,
 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
@@ -18,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toaster } from "@/components/ui/toast"
@@ -27,6 +31,7 @@ import { useUiTheme } from "@/hooks/useUiTheme"
 import { useI18n } from "@/i18n"
 import type { UiTheme } from "@/hooks/useUiTheme"
 import { CAPTION_PRESETS } from "@/lib/constants"
+import type { ColorKey } from "@/lib/constants"
 import type { TemplateParam } from "@/lib/types"
 import { cn } from "cn"
 import { AssetsSection } from "./components/studio/assets-section"
@@ -79,6 +84,31 @@ function ThemeToggle({
     >
       <Icon />
     </Button>
+  )
+}
+
+function HelpSection({
+  title,
+  ordered = false,
+  children,
+}: {
+  title: string
+  ordered?: boolean
+  children: ReactNode
+}) {
+  const List = ordered ? "ol" : "ul"
+  return (
+    <section className="rounded-xl border border-border/70 bg-card p-3">
+      <h3 className="mb-2 text-xs font-semibold text-foreground">{title}</h3>
+      <List
+        className={cn(
+          "space-y-1.5 pl-4 text-xs leading-5 text-muted-foreground",
+          ordered ? "list-decimal" : "list-disc",
+        )}
+      >
+        {children}
+      </List>
+    </section>
   )
 }
 
@@ -162,6 +192,69 @@ function Studio() {
           >
             {language === "zh" ? "中" : "EN"}
           </Button>
+          <div className="top-import-group">
+            <Button
+              size="sm"
+              variant="outline"
+              className="top-import rounded-r-none"
+              onClick={() => refs.unifiedFile.current?.click()}
+              title={t("导入图片、模板、配色、项目或字体，自动放入对应面板")}
+            >
+              <UploadIcon />
+              <span className="top-import-text">{t("导入")}</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="top-import-arrow w-7 rounded-l-none border-l-0 px-0"
+                    title={t("更多导入方式")}
+                    aria-label={t("更多导入方式")}
+                  >
+                    <ChevronDownIcon />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => refs.unifiedFile.current?.click()}>
+                  <UploadIcon />
+                  {t("导入文件")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => refs.folderFile.current?.click()}>
+                  <FolderOpenIcon />
+                  {t("导入模板文件夹")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <input
+            ref={refs.unifiedFile}
+            type="file"
+            multiple
+            accept="image/*,.html,.htm,text/html,.json,application/json,.txt,.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
+            className="hidden"
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? [])
+              event.target.value = ""
+              if (files.length) void actions.importFiles(files)
+            }}
+          />
+          <input
+            ref={refs.folderFile}
+            type="file"
+            multiple
+            {...{ webkitdirectory: "" }}
+            className="hidden"
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []).filter(
+                (file) => /\.html?$/i.test(file.name) || file.type === "text/html",
+              )
+              event.target.value = ""
+              if (files.length) void actions.importFiles(files)
+            }}
+          />
           <Button size="sm" variant="outline" onClick={() => studio.setProjectOpen(true)}>
             {t("项目")}
           </Button>
@@ -378,7 +471,7 @@ function Studio() {
       )}
 
       <datalist id="captionPresets">
-        {CAPTION_PRESETS.map((item) => <option key={item} value={item} />)}
+        {CAPTION_PRESETS.map((item) => <option key={item} value={t(item)} />)}
       </datalist>
 
       <Dialog
@@ -397,7 +490,7 @@ function Studio() {
           </DialogHeader>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button size="sm" onClick={actions.saveProject}>{t("保存项目文件")}</Button>
-            <Button size="sm" variant="outline" onClick={() => refs.projFile.current?.click()}>
+            <Button size="sm" variant="outline" onClick={() => refs.unifiedFile.current?.click()}>
               {t("载入项目文件")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => void actions.clearDraft()}>
@@ -424,76 +517,65 @@ function Studio() {
             >
               {t(resetArmed ? "确认全部重置？" : "全部重置")}
             </Button>
-            <input
-              ref={refs.projFile}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) void actions.loadProjectFile(file)
-                event.target.value = ""
-              }}
-            />
           </div>
           <p className="hint-text mt-3 text-emerald-600 dark:text-emerald-400">
             ● {studio.draftStatus}
-          </p>
-          <p className="hint-text mt-1">
-            {t("编辑后会自动存到本机浏览器，刷新页面可继续；「全部重置」会清空素材、参数、配色与草稿，恢复到初始状态（可用撤销找回）。")}
           </p>
           <p className="hint-text mt-3">{studio.projStatus}</p>
         </DialogContent>
       </Dialog>
 
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{t("使用说明")}</DialogTitle>
             <DialogDescription>
               {t("从素材到导出，几步完成一份截图作品。")}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 max-h-[65vh] space-y-5 overflow-y-auto pr-1 text-sm">
-            <section className="space-y-2">
-              <h3 className="font-medium text-foreground">{t("1 · 快速开始")}</h3>
-              <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
-                <li>{t("在「素材」拖入或选择截图；导入素材不会改动你已有的配色。")}</li>
-                <li>{t("在「排版模板」挑选版式，素材数量变化时会自动切换到能容纳的模板。")}</li>
-                <li>{t("用「模板参数」「配色」调整视觉；纸面明暗在配色面板的「纸面」小节，参数面板支持搜索与分组折叠，开启「启用 3D 展映」可让截图卡片错落立体展示。")}</li>
-                <li>{t("点顶栏「导出」，选择 PNG、视频或批量 ZIP。")}</li>
-              </ol>
-            </section>
-            <section className="space-y-2">
-              <h3 className="font-medium text-foreground">{t("2 · 预览操作")}</h3>
-              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>{t("在主预览上滚动滚轮缩放，按住预览区拖拽可自由移动画布位置。")}</li>
-                <li>{t("点「适应窗口」会同时重置缩放比例和画布位置。")}</li>
-                <li>{t("点预览栏的悬浮按钮可打开独立预览：拖标题栏移动、拖右下角调整窗口大小、滚轮缩放，还能最小化或全屏。")}</li>
-              </ul>
-            </section>
-            <section className="space-y-2">
-              <h3 className="font-medium text-foreground">{t("3 · 编辑与恢复")}</h3>
-              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+          <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <HelpSection title={t("1 · 快速开始")} ordered>
+                <li>{t("在「素材」导入截图；支持一次选择多张，导入不会改动已有配色。")}</li>
+                <li>{t("在「排版模板」挑选版式；素材数量变化时会自动切换到能容纳的模板。")}</li>
+                <li>{t("用「模板参数」「配色」微调视觉，再点顶栏「导出」输出 PNG、视频或批量 ZIP。")}</li>
+              </HelpSection>
+
+              <HelpSection title={t("2 · 素材与配色")}>
+                <li>{t("素材支持 PNG / JPG / WEBP；HEIC 请先转为 JPG。拖动缩略图可调整顺序，页面标签可快捷切换。")}</li>
+                <li>{t("点击色块打开 HSV 取色器，色值以大写 HEX 显示；「从图片取色」会按当前素材生成配色并覆盖现有颜色。")}</li>
+                <li>{t("纸面明暗只影响作品纸面，不改变配色本身；配色 JSON 可粘贴或从顶栏「导入」载入。")}</li>
+                <li>{t("配色的主题名字留空时，导出会使用模板内置标题。")}</li>
+              </HelpSection>
+
+              <HelpSection title={t("3 · 排版模板与参数")}>
+                <li>{t("内置排版与导入模板统一管理；顶栏「导入」左侧直接选文件，右侧箭头可展开「导入文件」或「导入模板文件夹」，按类型自动放入素材、模板、配色、项目或字体面板。")}</li>
+                <li>{t("导入模板请统一用顶栏「导入」；需要保留来源目录时选「导入模板文件夹」。模板面板的「自动分组」左侧按当前方式执行，右侧箭头可切换内置名称、导入文件夹名称或文件名，选择后立即分组。")}</li>
+                <li>{t("点击 ⋯ 或长按模板可上移、下移、移动分组或删除；分组标题可折叠，垃圾桶可删除整个分组。")}</li>
+                <li>{t("参数面板支持搜索、分组折叠与一键预设；手动调整后预设状态自动取消。")}</li>
+                <li>{t("非主题预览模板可用「编辑模板数据」替换内置示例文字与条目；开启「启用 3D 展映」可让卡片错落立体展示。")}</li>
+              </HelpSection>
+
+              <HelpSection title={t("4 · 预览与编辑")}>
+                <li>{t("主预览滚轮缩放、按住拖拽平移；「适应窗口」会重置缩放与位置。")}</li>
+                <li>{t("悬浮预览可拖动标题栏移动、拖右下角调整大小、滚轮缩放，并支持最小化与全屏。")}</li>
                 <li>{t("撤销 / 重做按钮，或按 Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z（也可按 Ctrl+Y）。")}</li>
-                <li>{t("点击色块可改色，色值直接以大写 HEX 显示；「从图片取色」需要手动触发。")}</li>
-                <li>{t("「模板参数」可上传本地字体（.ttf/.otf/.woff，大小不限）：标题字体在「图文排版」组，水印字体在「水印与质感」组开启水印后上传，导出同样生效。")}</li>
-                <li>{t("开启水印后可放图片水印并调大小；水印字体留空时，自动跟随自定义标题字体。")}</li>
-                <li>{t("编辑内容会自动存为本机草稿，刷新后可继续；项目对话框可保存或载入 JSON 项目文件，也可「全部重置」到初始状态。")}</li>
-                <li>{t("顶栏主题按钮在浅色 / 深色 / 跟随系统之间循环切换，选择会被记住；偏好设置不影响海报自身配色。")}</li>
-              </ul>
-            </section>
-            <section className="space-y-2">
-              <h3 className="font-medium text-foreground">{t("4 · 导出")}</h3>
-              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>{t("PNG 可设置输出宽度；视频可设置时长、帧率与清晰度。")}</li>
-                <li>{t("批量 ZIP 可选「仅 PNG」「仅视频」或「图片 + 视频」，按模板容量自动分组打包。")}</li>
-                <li>{t("视频导出会临时启用模板的 3D 时间轴，完成后自动恢复你的原始预览参数。")}</li>
-                <li>{t("视频优先用 WebCodecs 逐帧编码为 MP4（更快），失败时自动改用浏览器录制；回退时请保持页面在前台。iOS / iPadOS 需 Safari 16.4+，不支持时面板会给出提示，PNG 与批量 ZIP 不受影响。")}</li>
-                <li>{t("开启 3D 展映后导出的 PNG 同样会保留全部素材，无需担心图片丢失。")}</li>
-              </ul>
-            </section>
-            <p className="hint-text border-t pt-3">{t("按 Esc 可关闭弹窗或颜色选择器；导出的 PNG 可直接在 iOS / iPadOS 分享与保存。")}</p>
+                <li>{t("「模板参数」可上传本地字体：标题字体在「图文排版」组，水印字体在「水印与质感」组开启水印后上传；水印字体留空时跟随标题字体。")}</li>
+                <li>{t("编辑内容自动存为本机草稿，刷新后可继续；项目对话框可保存或载入 JSON 项目，也可全部重置。")}</li>
+                <li>{t("顶栏主题按钮在浅色 / 深色 / 跟随系统之间循环；语言按钮在中英文之间切换。主题只影响界面，语言还会影响模板中跟随界面语言的文字。")}</li>
+              </HelpSection>
+
+              <HelpSection title={t("5 · 导出")}>
+                <li>{t("PNG 可设置宽度；视频可设置时长、帧率与清晰度；批量 ZIP 可选仅 PNG、仅视频或图片 + 视频。")}</li>
+                <li>{t("批量导出按模板容量自动分组打包；视频导出会临时启用 3D 时间轴，完成后恢复原始预览参数。")}</li>
+                <li>{t("视频优先用 WebCodecs 逐帧编码为 MP4，失败时回退浏览器录制；回退时请保持页面在前台。iOS / iPadOS 需 Safari 16.4+，不支持时面板会提示，PNG 与 ZIP 不受影响。")}</li>
+                <li>{t("开启 3D 展映后导出的 PNG 仍保留全部素材。")}</li>
+              </HelpSection>
+
+              <HelpSection title={t("6 · 快捷键与提示")}>
+                <li>{t("按 Esc 可关闭弹窗或颜色选择器；导出的 PNG 可直接在 iOS / iPadOS 分享与保存。")}</li>
+              </HelpSection>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -503,7 +585,9 @@ function Studio() {
         colorKey={studio.picker.key}
         color={studio.picker.key ? studio.colors[studio.picker.key] : "#000000"}
         alpha={studio.picker.key ? (studio.alpha[studio.picker.key] ?? 1) : 1}
-        onChange={(key, hex, nextAlpha) => actions.updateColor(key, hex, nextAlpha)}
+        onChange={(key, hex, nextAlpha) =>
+          actions.updateColor(key as ColorKey, hex, nextAlpha)
+        }
         onClose={() => studio.setPicker({ open: false, key: null })}
       />
     </div>

@@ -50,9 +50,11 @@ export function RangeRow({
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
+  // Narrow side panels read better with the label above the control: the input
+  // gets the full width instead of losing ~70px to an inline label.
   return (
-    <Label className="field-row">
-      <span className="field-label w-[68px] shrink-0">{label}</span>
+    <Label className="flex w-full flex-col items-stretch gap-1 text-left">
+      <span className="field-label block">{label}</span>
       {children}
     </Label>
   )

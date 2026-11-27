@@ -13,6 +13,20 @@ import { RangeRow } from "./shared"
 
 export function ExportSection({ studio }: { studio: StudioApi }) {
   const { t } = useI18n()
+  const qualityOptions = [
+    { value: "1", label: t("标准 · 640px") },
+    { value: "1.5", label: t("清晰 · 960px") },
+    { value: "1.7", label: t("高清 · 1088px") },
+  ]
+  const batchOptions = [
+    { value: "images", label: t("仅 PNG 图片") },
+    { value: "videos", label: t("仅视频") },
+    { value: "both", label: t("图片 + 视频") },
+  ]
+  const qualityLabel =
+    qualityOptions.find((option) => option.value === String(studio.videoQuality))?.label ?? t("清晰度")
+  const batchLabel =
+    batchOptions.find((option) => option.value === studio.batchFormat)?.label ?? t("批量内容")
   return (
     <div className="space-y-4">
       <RangeRow
@@ -51,12 +65,14 @@ export function ExportSection({ studio }: { studio: StudioApi }) {
               onValueChange={(value) => studio.setVideoQuality(Number(value))}
             >
               <SelectTrigger size="sm" className="w-[190px]">
-                <SelectValue placeholder={t("清晰度")} />
+                <SelectValue placeholder={t("清晰度")}>{qualityLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">{t("标准 · 640px")}</SelectItem>
-                <SelectItem value="1.5">{t("清晰 · 960px")}</SelectItem>
-                <SelectItem value="1.7">{t("高清 · 1088px")}</SelectItem>
+                {qualityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} label={option.label}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -69,16 +85,19 @@ export function ExportSection({ studio }: { studio: StudioApi }) {
           onValueChange={(value) => studio.setBatchFormat(value as "images" | "videos" | "both")}
         >
           <SelectTrigger size="sm" className="w-[190px]">
-            <SelectValue placeholder={t("批量内容")} />
+            <SelectValue placeholder={t("批量内容")}>{batchLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="images">{t("仅 PNG 图片")}</SelectItem>
-            <SelectItem value="videos" disabled={!studio.videoAvailable}>
-              {t("仅视频")}
-            </SelectItem>
-            <SelectItem value="both" disabled={!studio.videoAvailable}>
-              {t("图片 + 视频")}
-            </SelectItem>
+            {batchOptions.map((option) => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                label={option.label}
+                disabled={option.value !== "images" && !studio.videoAvailable}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -118,11 +137,7 @@ export function ExportSection({ studio }: { studio: StudioApi }) {
           </Button>
         ) : null}
       </div>
-      {studio.videoAvailable ? (
-        <p className="hint-text">
-          {t("优先使用 WebCodecs 逐帧编码（更快、不依赖实时录制），不可用时自动回退到浏览器录制接口；回退时请保持页面在前台。iOS / iPadOS Safari 16.4+ 支持。")}
-        </p>
-      ) : (
+      {studio.videoAvailable ? null : (
         <p className="hint-text">
           {t("当前环境没有可用的视频编码器（iOS / iPadOS Safari 需 16.4+）。PNG 图片和批量 ZIP 不受影响。")}
         </p>

@@ -21,7 +21,18 @@ import { exportName, exportPng, exportVideo, exportBatchZip, downloadBlob, video
 import { clearDraft, loadDraft, saveDraft } from "@/lib/draft"
 import { loadProject, projectJson } from "@/lib/project"
 import type { LoadedProject } from "@/lib/project"
-import { buildTemplates, evalWhen, paramValue } from "@/lib/templates"
+import {
+  buildTemplates,
+  evalWhen,
+  paramValue,
+  parseTemplateHtml,
+  templateBuiltinTexts,
+  templateFolderFromFile,
+  templateGroupByMode,
+  templateMetaEntries,
+  templateTitle,
+} from "@/lib/templates"
+import type { TemplateGroupMode } from "@/lib/templates"
 import type { ParamValues, Shot, StudioPayload, Template, ThemeMeta, Tone } from "@/lib/types"
 
 type AccordionValue = string[]
@@ -138,9 +149,16 @@ export function useStudio() {
   const { t, language } = useI18n()
   const notify = (message: string) => toast.add({ title: message, timeout: 2400 })
 
-  const templates = TEMPLATES
+  const [templates, setTemplates] = useState<Template[]>(TEMPLATES)
+  const templatesRef = useRef(templates)
+  templatesRef.current = templates
   const [shots, setShots] = useState<Shot[]>([])
   const [currentTpl, setCurrentTpl] = useState<Template | null>(DEFAULT_TEMPLATE)
+  const currentTplRef = useRef(currentTpl)
+  currentTplRef.current = currentTpl
+  // Built-in layouts are 640px; imported Reeden templates use their own meta width.
+  const canvasWidth = (template: Template | null = currentTpl) => template?.width ?? 640
+  const templateGroup = (template: Template) => template.group?.trim() || t("导入模板")
   const [params, setParams] = useState<ParamValues>({})
   const [activePreset, setActivePreset] = useState<string | null>(null)
   const [colors, setColors] = useState<Colors>({ ...LIGHT_COLORS })
@@ -151,12 +169,42 @@ export function useStudio() {
   const [author, setAuthor] = useState("")
   const [sharer, setSharer] = useState("")
   const [urlText, setUrlText] = useState("")
+  // Track the values we filled from the last template so switching templates
+  // refreshes untouched fields without overwriting the user's own edits.
+  const autoTextsRef = useRef({ name: "", description: "", author: "", sharer: "", urlText: "" })
+  useEffect(() => {
+    const next = templateBuiltinTexts(currentTpl)
+    // Work-info inputs map 1:1 to the template's meta entries (label = name,
+    // value = content). The name field keeps the user's own edit, but the four
+    // meta-backed fields always refresh so values from a previous template
+    // cannot linger after switching.
+    const meta = templateMetaEntries(currentTpl)
+    const prev = autoTextsRef.current
+    const resolved = {
+      name: !name.trim() || name === prev.name ? next.name : name,
+      description: meta[0]?.content || "",
+      author: meta[1]?.content || "",
+      sharer: meta[2]?.content || "",
+      urlText: meta[3]?.content || "",
+    }
+    autoTextsRef.current = resolved
+    if (resolved.name !== name) setName(resolved.name)
+    if (resolved.description !== description) setDescription(resolved.description)
+    if (resolved.author !== author) setAuthor(resolved.author)
+    if (resolved.sharer !== sharer) setSharer(resolved.sharer)
+    if (resolved.urlText !== urlText) setUrlText(resolved.urlText)
+    // Only a template change (or its late-harvested mock) should refill fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTpl?.key, currentTpl?.mock])
   const [zoom, setZoomValue] = useState(1)
   const [status, setStatus] = useState(t("正在载入模板…"))
   const [tplHint, setTplHint] = useState(
     DEFAULT_TEMPLATE
       ? t("当前：{name} · {count} 个位置", { name: t(DEFAULT_TEMPLATE.name), count: DEFAULT_TEMPLATE.count })
       : "",
+  )
+  const [templateImportStatus, setTemplateImportStatus] = useState(
+    t("仅支持 Reeden 单文件 HTML 模板，请只导入可信来源。"),
   )
   const [jsonRaw, setJsonRaw] = useState("")
   const [jsonStatus, setJsonStatus] = useState(t("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。"))
@@ -214,12 +262,16 @@ export function useStudio() {
         : "",
     )
     setJsonStatus(t("支持 Reeden 主题配置，也支持任意含颜色字段的 JSON。"))
+    setTemplateImportStatus(t("仅支持 Reeden 单文件 HTML 模板，请只导入可信来源。"))
     setDraftStatus(t("自动保存已开启"))
     // t is captured from the render for this language; re-run only on change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language])
 
   const meta: ThemeMeta = { name, description, author, sharer, urlText }
+  // An empty theme name means "use the template's own title", both in the
+  // rendered poster and in exported file names.
+  const exportTitle = name.trim() || templateTitle(currentTpl)
 
   const previewRef = useRef<HTMLIFrameElement>(null)
   const floatPreviewRef = useRef<HTMLIFrameElement>(null)
@@ -240,9 +292,8 @@ export function useStudio() {
   const pvscrollRef = useRef<HTMLDivElement>(null)
   const pvstageRef = useRef<HTMLDivElement>(null)
   const sideRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const jsonFileRef = useRef<HTMLInputElement>(null)
-  const projFileRef = useRef<HTMLInputElement>(null)
+  const unifiedFileRef = useRef<HTMLInputElement>(null)
+  const folderFileRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const previewRaf = useRef(0)
   const refitTimer = useRef(0)
@@ -355,8 +406,13 @@ export function useStudio() {
   // original font (still works, just slower on huge CJK fonts).
   async function prepareExportFonts(signal: AbortSignal) {
     exportFonts.current = null
-    const hasFont = [params.titleFont, params.watermarkFontFile].some(
-      (value) => typeof value === "string" && value.startsWith("data:"),
+    const fontKeys = Array.from(new Set([
+      ...(currentTpl?.params.filter((item) => item.type === "font").map((item) => item.key) ?? []),
+      "titleFont",
+      "watermarkFontFile",
+    ]))
+    const hasFont = fontKeys.some(
+      (key) => typeof params[key] === "string" && String(params[key]).startsWith("data:"),
     )
     if (!hasFont) return
     try {
@@ -371,10 +427,10 @@ export function useStudio() {
         lang: language,
       })
       const text = collectPayloadText(full)
-      const subset = await subsetPayloadFonts(full, text, signal)
+      const subset = await subsetPayloadFonts(full, text, signal, fontKeys)
       if (signal.aborted) return
       const overrides: ParamValues = {}
-      for (const key of ["titleFont", "watermarkFontFile"]) {
+      for (const key of fontKeys) {
         if (subset.params[key] !== params[key]) overrides[key] = subset.params[key]
       }
       exportFonts.current = overrides
@@ -388,7 +444,7 @@ export function useStudio() {
     try {
       const doc = frame?.contentDocument
       if (!doc) return 0
-      const poster = doc.getElementById("poster") ?? doc.body
+      const poster = doc.querySelector<HTMLElement>("[data-reeden-capture]") ?? doc.getElementById("poster") ?? doc.body
       return Math.ceil(poster.getBoundingClientRect().height)
     } catch {
       return 0
@@ -398,7 +454,7 @@ export function useStudio() {
   function floatContentHeight(frame: HTMLIFrameElement) {
     try {
       const doc = frame.contentDocument
-      const poster = doc?.getElementById("poster") ?? doc?.body
+      const poster = doc?.querySelector<HTMLElement>("[data-reeden-capture]") ?? doc?.getElementById("poster") ?? doc?.body
       const measured = Math.ceil(poster?.getBoundingClientRect().height ?? 0)
       return measured > 40 ? measured : 900
     } catch {
@@ -421,12 +477,13 @@ export function useStudio() {
       else win.style.width = ""
     }
     const boxWidth = Math.max(120, win.clientWidth - 2)
-    const fit = boxWidth / 640
+    const baseWidth = canvasWidth()
+    const fit = boxWidth / baseWidth
     const scale = fit * floatZoom.current
     const height = floatContentHeight(frame)
-    inner.style.width = `${Math.round(640 * scale)}px`
+    inner.style.width = `${Math.round(baseWidth * scale)}px`
     inner.style.height = `${Math.round(height * scale)}px`
-    frame.style.width = "640px"
+    frame.style.width = `${baseWidth}px`
     frame.style.height = `${height}px`
     frame.style.transform = `scale(${scale})`
     frame.style.transformOrigin = "top left"
@@ -591,7 +648,7 @@ export function useStudio() {
     if (!stage) return
     const scale = zoomRef.current
     const height = contentHeight() || 900
-    stage.style.width = `${Math.round(640 * scale)}px`
+    stage.style.width = `${Math.round(canvasWidth() * scale)}px`
     stage.style.height = `${Math.round(height * scale)}px`
     stage.style.transformOrigin = "top left"
     const { x, y } = panRef.current
@@ -633,7 +690,7 @@ export function useStudio() {
     const padY =
       (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0)
     const scale = Math.min(
-      (wrap.clientWidth - padX) / 640,
+      (wrap.clientWidth - padX) / canvasWidth(),
       (wrap.clientHeight - padY) / height,
       1.4,
     )
@@ -648,6 +705,24 @@ export function useStudio() {
     setZoom(value)
   }
 
+  // Imported templates ship their own mock payload. Read it from the loaded
+  // iframe (rather than eval'ing file text) so we stay aligned with the exact
+  // object the template itself created.
+  function harvestImportedMock(frame: HTMLIFrameElement, templateKey: string) {
+    const imported = templatesRef.current.find((item) => item.key === templateKey && item.imported)
+    if (!imported || imported.mock) return
+    try {
+      const source = (frame.contentWindow as Window & { ReedenShareTemplateMock?: unknown })
+        ?.ReedenShareTemplateMock
+      if (!source || typeof source !== "object") return
+      const data = JSON.parse(JSON.stringify(source)) as Record<string, unknown>
+      setTemplates((prev) => prev.map((item) => (item.key === templateKey ? { ...item, mock: data } : item)))
+      setCurrentTpl((prev) => (prev?.key === templateKey ? { ...prev, mock: data } : prev))
+    } catch {
+      // A circular mock is fine to ignore — the template can still render it.
+    }
+  }
+
   function ensurePreviewFrame(template: Template) {
     const stage = pvstageRef.current
     if (!stage) return null
@@ -656,7 +731,7 @@ export function useStudio() {
     const frame = document.createElement("iframe")
     frame.title = t("留白模板预览")
     frame.className = "preview-shell"
-    frame.style.width = "640px"
+    frame.style.width = `${canvasWidth(template)}px`
     frame.style.height = "900px"
     frame.style.border = "0"
     frame.style.display = "none"
@@ -666,6 +741,7 @@ export function useStudio() {
     frame.onload = () => {
       loadedFrames.current.add(template.key)
       bindPreviewEvents(frame)
+      harvestImportedMock(frame, template.key)
       if (previewRef.current !== frame) return
       latestActions.current.pushPreview()
       observePreview(frame)
@@ -710,6 +786,226 @@ export function useStudio() {
     setParams({})
     setActivePreset(null)
     setTplHint(t("当前：{name} · {count} 个位置", { name: t(template.name), count: template.count }))
+  }
+
+  function registerTemplate(html: string, fileName = "", sourceFolder = "") {
+    const parsed = parseTemplateHtml(html, fileName, sourceFolder)
+    const existing = templatesRef.current.find((item) => item.key === parsed.key)
+    // Re-importing the same HTML should not wipe the user's group or edited mock,
+    // but a fresh folder/file source should update the grouping metadata.
+    const template: Template = existing
+      ? {
+          ...existing,
+          ...parsed,
+          group: existing.group ?? parsed.group,
+          mock: existing.mock,
+          sourceFile: parsed.sourceFile || existing.sourceFile,
+          sourceFolder: parsed.sourceFolder || existing.sourceFolder,
+        }
+      : parsed
+    setTemplates((prev) =>
+      existing ? prev.map((item) => (item.key === template.key ? template : item)) : [...prev, template],
+    )
+    recordDiscrete()
+    setCurrentTpl(template)
+    setParams({})
+    setActivePreset(null)
+    setTplHint(t("当前：{name} · {count} 个位置", { name: t(template.name), count: template.count }))
+    setTemplateImportStatus(
+      t("已载入「{name}」· 类型 {type} · {count} 个参数", {
+        name: template.name,
+        type: template.type || "themePreview",
+        count: template.params.length,
+      }),
+    )
+    notify(t("模板已载入"))
+    return template
+  }
+
+  async function importTemplateFile(file: File, sourceFolder = "") {
+    if (!/\.html?$/i.test(file.name) && file.type !== "text/html") {
+      setTemplateImportStatus(t("请选择 .html 模板文件"))
+      notify(t("请选择 .html 模板文件"))
+      return
+    }
+    try {
+      const html = await file.text()
+      if (html.length > 2_000_000) {
+        setTemplateImportStatus(t("模板文件过大（上限 2MB）"))
+        notify(t("模板文件过大（上限 2MB）"))
+        return
+      }
+      registerTemplate(html, file.name, sourceFolder || templateFolderFromFile(file))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setTemplateImportStatus(t("模板导入失败：{error}", { error: message }))
+      notify(t("模板导入失败"))
+    }
+  }
+
+  function updateTemplateData(data: Record<string, unknown>) {
+    if (!currentTpl?.imported) return
+    const next: Template = { ...currentTpl, mock: data }
+    setTemplates((prev) => prev.map((item) => (item.key === next.key ? next : item)))
+    setCurrentTpl(next)
+    setTemplateImportStatus(t("模板数据已更新"))
+    notify(t("模板数据已更新"))
+  }
+
+  function setTemplateGroup(key: string, group: string) {
+    const clean = group.trim() || t("导入模板")
+    const target = templatesRef.current.find((item) => item.key === key && item.imported)
+    if (!target || target.group === clean) return
+    const next: Template = { ...target, group: clean }
+    const list = templatesRef.current.map((item) => (item.key === key ? next : item))
+    templatesRef.current = list
+    setTemplates(list)
+    if (currentTplRef.current?.key === key) setCurrentTpl(next)
+    setTemplateImportStatus(t("模板分组已更新"))
+  }
+
+  function moveTemplate(key: string, direction: "up" | "down") {
+    const list = templatesRef.current
+    const target = list.find((item) => item.key === key && item.imported)
+    if (!target) return
+    const group = templateGroup(target)
+    const members = list.filter((item) => item.imported && templateGroup(item) === group)
+    const index = members.findIndex((item) => item.key === key)
+    const nextIndex = index + (direction === "up" ? -1 : 1)
+    if (index < 0 || nextIndex < 0 || nextIndex >= members.length) return
+
+    recordDiscrete()
+    const ordered = [...members]
+    ;[ordered[index], ordered[nextIndex]] = [ordered[nextIndex], ordered[index]]
+    let cursor = 0
+    const next = list.map((item) =>
+      item.imported && templateGroup(item) === group ? ordered[cursor++] : item,
+    )
+    templatesRef.current = next
+    setTemplates(next)
+    setTemplateImportStatus(t("模板顺序已更新"))
+  }
+
+  function moveTemplateToGroup(key: string, group: string) {
+    const clean = group.trim() || t("导入模板")
+    const list = templatesRef.current
+    const target = list.find((item) => item.key === key && item.imported)
+    if (!target) return
+
+    recordDiscrete()
+    const moved: Template = { ...target, group: clean }
+    const rest = list.filter((item) => item.key !== key)
+    const builtIns = rest.filter((item) => !item.imported)
+    const imported = rest.filter((item) => item.imported)
+    const positions = imported
+      .map((item, index) => (templateGroup(item) === clean ? index : -1))
+      .filter((index) => index >= 0)
+    const insertAt = positions.length ? positions[positions.length - 1] + 1 : imported.length
+    imported.splice(insertAt, 0, moved)
+    const next = [...builtIns, ...imported]
+    templatesRef.current = next
+    setTemplates(next)
+    if (currentTplRef.current?.key === key) setCurrentTpl(moved)
+    setTemplateImportStatus(t("模板已移动到「{group}」", { group: clean }))
+  }
+
+  function deleteTemplate(key: string) {
+    const target = templatesRef.current.find((item) => item.key === key && item.imported)
+    if (!target) return
+    recordDiscrete()
+    const remaining = templatesRef.current.filter((item) => item.key !== key)
+    templatesRef.current = remaining
+    setTemplates(remaining)
+
+    // Drop the cached iframe so a deleted template cannot keep rendering or
+    // linger in the hidden preview stack.
+    const frame = previewFrames.current.get(key)
+    if (frame) {
+      if (previewRef.current === frame) previewRef.current = null
+      frame.remove()
+      previewFrames.current.delete(key)
+      loadedFrames.current.delete(key)
+    }
+
+    if (currentTplRef.current?.key === key) {
+      const fallback = DEFAULT_TEMPLATE ?? remaining[0] ?? null
+      setCurrentTpl(fallback)
+      setParams({})
+      setActivePreset(null)
+      setTplHint(
+        fallback
+          ? t("当前：{name} · {count} 个位置", { name: t(fallback.name), count: fallback.count })
+          : "",
+      )
+    }
+    setTemplateImportStatus(t("已删除「{name}」", { name: target.name }))
+    notify(t("模板已删除"))
+  }
+
+  function deleteTemplateGroup(group: string) {
+    const list = templatesRef.current
+    const keys = new Set(
+      list.filter((item) => item.imported && templateGroup(item) === group).map((item) => item.key),
+    )
+    if (!keys.size) return
+    recordDiscrete()
+    const remaining = list.filter((item) => !keys.has(item.key))
+    templatesRef.current = remaining
+    setTemplates(remaining)
+
+    keys.forEach((key) => {
+      const frame = previewFrames.current.get(key)
+      if (frame) {
+        if (previewRef.current === frame) previewRef.current = null
+        frame.remove()
+        previewFrames.current.delete(key)
+        loadedFrames.current.delete(key)
+      }
+    })
+
+    if (currentTplRef.current && keys.has(currentTplRef.current.key)) {
+      const fallback = DEFAULT_TEMPLATE ?? remaining[0] ?? null
+      setCurrentTpl(fallback)
+      setParams({})
+      setActivePreset(null)
+      setTplHint(
+        fallback
+          ? t("当前：{name} · {count} 个位置", { name: t(fallback.name), count: fallback.count })
+          : "",
+      )
+    }
+    setTemplateImportStatus(t("已删除分组「{group}」", { group }))
+    notify(t("分组已删除"))
+  }
+
+  function autoGroupTemplates(mode: TemplateGroupMode = "builtin") {
+    const list = templatesRef.current
+    const imported = list.filter((item) => item.imported)
+    if (!imported.length) {
+      notify(t("还没有导入模板"))
+      return
+    }
+    recordDiscrete()
+    const grouped = imported.map((item) => ({ ...item, group: templateGroupByMode(item, mode) }))
+    const names = Array.from(new Set(grouped.map((item) => item.group || ""))).sort((a, b) =>
+      a.localeCompare(b, language === "zh" ? "zh-Hans-CN" : "en"),
+    )
+    const ordered = names.flatMap((name) => grouped.filter((item) => item.group === name))
+    const next = [...list.filter((item) => !item.imported), ...ordered]
+    templatesRef.current = next
+    setTemplates(next)
+    if (currentTplRef.current) {
+      const updated = next.find((item) => item.key === currentTplRef.current?.key)
+      if (updated) setCurrentTpl(updated)
+    }
+    const message =
+      mode === "folder"
+        ? t("按导入文件夹名称分为 {count} 组", { count: names.length })
+        : mode === "file"
+          ? t("按文件名分为 {count} 组", { count: names.length })
+          : t("已按内置名称分为 {count} 组", { count: names.length })
+    setTemplateImportStatus(message)
+    notify(message)
   }
 
   function autoPickTemplate(list: Shot[] = shots) {
@@ -777,6 +1073,7 @@ export function useStudio() {
       floatTemplate.current = currentTpl.key
       floatLoaded.current = false
       floatZoom.current = 1
+      frame.style.width = `${canvasWidth(currentTpl)}px`
       frame.srcdoc = currentTpl.html
       frame.onload = () => {
         frame.onload = null
@@ -1090,6 +1387,9 @@ export function useStudio() {
   function saveProject() {
     const data = projectJson({
       templateKey: currentTpl?.key ?? null,
+      templateHtml: currentTpl?.imported ? currentTpl.html : undefined,
+      templateData: currentTpl?.imported ? currentTpl.mock : undefined,
+      importedTemplates: templatesRef.current,
       params,
       colors,
       meta,
@@ -1098,7 +1398,7 @@ export function useStudio() {
     })
     downloadBlob(
       new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      exportName(name, t(" 项目.json")),
+      exportName(exportTitle, t(" 项目.json")),
     )
     setProjStatus(t("已保存"))
   }
@@ -1116,10 +1416,56 @@ export function useStudio() {
     setAuthor(loaded.meta.author)
     setSharer(loaded.meta.sharer)
     setUrlText(loaded.meta.urlText)
-    const target =
-      templates.find((item) => item.key === loaded.templateKey) ??
-      templates.find((item) => item.count >= loaded.shots.length) ??
-      templates[0]
+
+    // Projects/drafts carry every imported template so groups and deletions
+    // survive reloads; older files only embed the active template.
+    let available = templatesRef.current
+    const restored: Template[] = []
+    for (const record of loaded.importedTemplates ?? []) {
+      try {
+        const parsed = parseTemplateHtml(record.html, record.sourceFile ?? "", record.sourceFolder ?? "")
+        restored.push({
+          ...parsed,
+          group: record.group || parsed.group,
+          mock: record.mock,
+        })
+      } catch {
+        // Skip an unusable embedded template and keep the rest of the project.
+      }
+    }
+    if (loaded.templateHtml) {
+      try {
+        const parsed = parseTemplateHtml(loaded.templateHtml)
+        if (!restored.some((item) => item.key === parsed.key)) restored.push(parsed)
+      } catch {
+        // Older files may carry a broken template; built-ins remain available.
+      }
+    }
+    if (loaded.templateData && loaded.templateKey) {
+      const index = restored.findIndex((item) => item.key === loaded.templateKey)
+      if (index >= 0) restored[index] = { ...restored[index], mock: loaded.templateData }
+    }
+    if (restored.length) {
+      const restoredKeys = new Set(restored.map((item) => item.key))
+      available = [
+        ...available.filter((item) => !(item.imported && restoredKeys.has(item.key))),
+        ...restored,
+      ]
+      templatesRef.current = available
+      setTemplates(available)
+    }
+
+    let target =
+      available.find((item) => item.key === loaded.templateKey) ??
+      available.find((item) => item.count >= loaded.shots.length) ??
+      available[0]
+    if (loaded.templateData && target?.imported) {
+      target = { ...target, mock: loaded.templateData }
+      const resolved = target
+      available = available.map((item) => (item.key === resolved.key ? resolved : item))
+      templatesRef.current = available
+      setTemplates(available)
+    }
     setCurrentTpl(target)
     setTplHint(t("当前：{name} · {hint}", { name: t(target.name), hint: t(originLabel) }))
     setProjStatus(originLabel)
@@ -1137,6 +1483,117 @@ export function useStudio() {
     }
   }
 
+  // One file picker for the whole studio. Files are routed to the panel that
+  // owns them, so mixed batches can be dropped in without choosing a category.
+  async function importFiles(fileList: FileList | File[]) {
+    const files = Array.from(fileList)
+    if (!files.length) return
+
+    const projects: File[] = []
+    const templates: File[] = []
+    const templateFolders = new Map<File, string>()
+    const images: File[] = []
+    const fonts: File[] = []
+    const colors: string[] = []
+    const unknown: string[] = []
+
+    for (const file of files) {
+      const name = file.name.toLowerCase()
+      if (/^image\//.test(file.type) || /\.(png|jpe?g|webp|gif|bmp|avif|heic|heif)$/i.test(name)) {
+        images.push(file)
+      } else if (/\.html?$/.test(name) || file.type === "text/html") {
+        templates.push(file)
+        templateFolders.set(file, templateFolderFromFile(file))
+      } else if (/\.(ttf|otf|woff2?)$/.test(name) || /font\//.test(file.type)) {
+        fonts.push(file)
+      } else if (/\.(json|txt)$/.test(name) || file.type === "application/json") {
+        const text = await file.text()
+        let parsed: unknown = null
+        try {
+          parsed = JSON.parse(text)
+        } catch {
+          parsed = null
+        }
+        const isProject =
+          !!parsed &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed) &&
+          ((parsed as Record<string, unknown>).app === "liubai-screenshot-studio" ||
+            ("shots" in parsed && "params" in parsed))
+        if (isProject) projects.push(file)
+        else colors.push(text)
+      } else {
+        unknown.push(file.name)
+      }
+    }
+
+    const sections = new Set<string>()
+    let importedCount = 0
+
+    // Project files restore the whole document, so load them first; any other
+    // files in the same batch then layer on top of that restored state.
+    for (const file of projects) {
+      await loadProjectFile(file)
+      importedCount += 1
+    }
+    for (const file of templates) {
+      await importTemplateFile(file, templateFolders.get(file))
+      importedCount += 1
+    }
+    if (templates.length) sections.add("templates")
+    if (images.length) {
+      await addFiles(images)
+      importedCount += images.length
+      sections.add("assets")
+    }
+    for (const file of fonts) {
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () =>
+            typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("read failed"))
+          reader.onerror = () => reject(reader.error ?? new Error("read failed"))
+          reader.readAsDataURL(file)
+        })
+        const declared = currentTplRef.current?.params ?? []
+        const key =
+          declared.find((item) => item.type === "font" && item.key === "titleFont")?.key ??
+          declared.find((item) => item.type === "font")?.key ??
+          "titleFont"
+        setParamValue(key, dataUrl)
+        importedCount += 1
+        sections.add("params")
+      } catch {
+        notify(t("字体读取失败"))
+      }
+    }
+    for (const text of colors) {
+      // Keep the advanced JSON box in sync so users can see and re-apply what
+      // the unified import just loaded.
+      setJsonRaw(text)
+      if (applyJson(text)) {
+        importedCount += 1
+        sections.add("color")
+      }
+    }
+
+    sections.forEach((section) => {
+      setMobileTab("side")
+      openSection(section)
+    })
+
+    if (unknown.length) {
+      notify(t("未识别文件：{names}", { names: unknown.slice(0, 3).join("、") }))
+    }
+    if (importedCount) {
+      const message = t("已导入 {count} 个文件，并按类型放入对应面板", { count: importedCount })
+      setStatus(message)
+      notify(message)
+    } else if (!unknown.length) {
+      notify(t("没有可导入的文件"))
+    }
+  }
+
   async function clearDraftNow() {
     await clearDraft()
     setDraftStatus(t("草稿已清空 · 新改动会自动保存"))
@@ -1147,6 +1604,8 @@ export function useStudio() {
   async function resetAll() {
     recordDiscrete()
     commitShots([])
+    templatesRef.current = TEMPLATES
+    setTemplates(TEMPLATES)
     setCurrentTpl(DEFAULT_TEMPLATE)
     setTplHint(
       DEFAULT_TEMPLATE
@@ -1228,12 +1687,6 @@ export function useStudio() {
   }
 
   async function runExportPng() {
-    if (!name.trim()) {
-      notify(t("先填写主题名字"))
-      openSection("color")
-      setTimeout(() => nameInputRef.current?.focus(), 120)
-      return
-    }
     // The progress bar and status live in the Export accordion. Reveal it whenever
     // export starts from the top bar, otherwise the run looks like a silent hang.
     const signal = beginExport()
@@ -1242,7 +1695,7 @@ export function useStudio() {
       await exportPng({
         preview: previewRef.current,
         templateKey: currentTpl?.key ?? "",
-        title: name,
+        title: exportTitle,
         targetWidth: pngWidth,
         renderNow: pushPreview,
         hasShots: shots.length > 0,
@@ -1299,7 +1752,7 @@ export function useStudio() {
         preview: previewRef.current,
         template: currentTpl,
         groups,
-        title: name,
+        title: exportTitle,
         targetWidth: pngWidth,
         includePng,
         includeVideo,
@@ -1364,7 +1817,7 @@ export function useStudio() {
         preview: previewRef.current,
         template: currentTpl,
         shots: shotsRef.current,
-        title: name,
+        title: exportTitle,
         duration: videoDuration,
         fps: videoFps,
         quality: videoQuality,
@@ -1460,6 +1913,9 @@ export function useStudio() {
     draftTimer.current = window.setTimeout(() => {
       const data = projectJson({
         templateKey: currentTpl?.key ?? null,
+        templateHtml: currentTpl?.imported ? currentTpl.html : undefined,
+        templateData: currentTpl?.imported ? currentTpl.mock : undefined,
+        importedTemplates: templatesRef.current,
         params,
         colors,
         meta,
@@ -1475,7 +1931,7 @@ export function useStudio() {
     }, 900)
     return () => window.clearTimeout(draftTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText, language])
+  }, [templates, currentTpl, shots, params, colors, tone, name, description, author, sharer, urlText, language])
 
   // Re-fit the floating preview when its window mode changes.
   useEffect(() => {
@@ -1793,6 +2249,7 @@ export function useStudio() {
     zoom,
     status,
     tplHint,
+    templateImportStatus,
     jsonRaw,
     jsonStatus,
     colorStatus,
@@ -1854,15 +2311,15 @@ export function useStudio() {
       pvscroll: pvscrollRef,
       pvstage: pvstageRef,
       side: sideRef,
-      fileInput: fileInputRef,
-      jsonFile: jsonFileRef,
-      projFile: projFileRef,
+      unifiedFile: unifiedFileRef,
+      folderFile: folderFileRef,
       nameInput: nameInputRef,
       floatInner: floatInnerRef,
     },
     actions: {
       notify,
       addFiles,
+      importFiles,
       clearShots,
       removeShot,
       moveShot,
@@ -1872,6 +2329,14 @@ export function useStudio() {
       onShotPointerMove,
       onShotPointerUp,
       selectTemplate,
+      importTemplateFile,
+      updateTemplateData,
+      setTemplateGroup,
+      moveTemplate,
+      moveTemplateToGroup,
+      deleteTemplate,
+      deleteTemplateGroup,
+      autoGroupTemplates,
       setParamValue,
       applyPreset,
       applyTone,

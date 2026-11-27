@@ -221,9 +221,10 @@ export async function subsetPayloadFonts(
   payload: StudioPayload,
   text: string,
   signal?: AbortSignal,
+  fontKeys: string[] = FONT_PARAM_KEYS,
 ): Promise<StudioPayload> {
   const params = payload.params
-  const targets = FONT_PARAM_KEYS.filter((key) => {
+  const targets = fontKeys.filter((key) => {
     const value = params[key]
     // FileReader labels uploaded .ttf/.otf as data:application/octet-stream,
     // so match any data URI and let the signature check in subsetFontDataUri

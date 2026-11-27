@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronDown, ChevronRight, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/i18n"
 import { Input } from "@/components/ui/input"
@@ -15,8 +15,8 @@ import { Switch } from "@/components/ui/switch"
 import type { StudioApi } from "@/hooks/useStudio"
 import { hexNorm } from "@/lib/color"
 import { STYLE_PRESETS } from "@/lib/presets"
+import { ColorPickerDialog } from "./color-picker-dialog"
 import type { Template, TemplateParam } from "@/lib/types"
-import { cn } from "cn"
 
 // Core groups stay open; fine-tuning groups start collapsed to cut down the
 // 44-control wall. Users can still expand anything, and the choice persists —
@@ -111,13 +111,6 @@ export function ParamsSection({
   }, [collapsed, state.key, templateKey])
 
   const q = query.trim().toLowerCase()
-  const visibleCount = useMemo(
-    () => groups.reduce(
-      (sum, group) => sum + group.items.filter((param) => studio.visibleParam(param.when)).length,
-      0,
-    ),
-    [groups, studio.params, studio.currentTpl],
-  )
   const filtered = useMemo(() => {
     // Without a query keep the original behavior: hidden params stay hidden.
     // With a query, include hidden matches so users can discover controls gated
@@ -143,7 +136,6 @@ export function ParamsSection({
       .filter((group) => group.items.length > 0)
   }, [groups, q, studio.params, studio.currentTpl, language])
 
-  const matchedCount = filtered.reduce((sum, group) => sum + group.items.length, 0)
 
   function toggle(name: string) {
     // Values store "collapsed"; isGroupOpen returns "expanded". Flipping an
@@ -185,7 +177,6 @@ export function ParamsSection({
             </Button>
           ))}
         </div>
-        <p className="hint-text mt-2">{t("一键套用整组参数；手动调整后预设状态自动取消。")}</p>
       </div>
 
       <div>
@@ -199,17 +190,12 @@ export function ParamsSection({
             aria-label={t("搜索参数")}
           />
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="hint-text">
-            {q
-              ? t("匹配 {count} 项", { count: matchedCount })
-              : t("{count} 组 · {total} 项", { count: groups.length, total: visibleCount })}
-          </span>
+        <div className="mt-2 flex items-center justify-end gap-2">
           <div className="flex shrink-0 gap-1">
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-1.5 text-[11px]"
+              className="h-6 px-1.5 text-xs"
               onClick={() => setAll(true)}
             >
               {t("全部展开")}
@@ -217,7 +203,7 @@ export function ParamsSection({
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-1.5 text-[11px]"
+              className="h-6 px-1.5 text-xs"
               onClick={() => setAll(false)}
             >
               {t("全部收起")}
@@ -226,58 +212,53 @@ export function ParamsSection({
         </div>
       </div>
 
-      {filtered.map((group) => {
-        const open = q ? true : isGroupOpen(collapsed, group.name)
-        return (
-          <div key={group.name}>
-            <button
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs font-medium",
-                "hover:bg-muted/60 transition-colors",
-              )}
-              onClick={() => {
-                if (!q) toggle(group.name)
-              }}
-              aria-expanded={open}
-              data-param-group={group.name}
-            >
-              {open ? (
-                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-              )}
-              <span className="min-w-0 flex-1 truncate">{group.label ?? t(group.name)}</span>
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                {group.items.length}
-              </span>
-            </button>
-            {open && (
-              <div className="mt-1.5 space-y-2 pl-1">
-                {group.items.map((param) => {
-                  const hidden = !studio.visibleParam(param.when)
-                  return (
-                    <div key={param.key}>
-                      <ParamControl studio={studio} param={param} />
-                      {hidden ? (
-                        <p className="hint-text mt-1 pl-0.5 text-amber-600 dark:text-amber-400">
-                          {t("当前隐藏 · 需先{reason}", { reason: hiddenReason(param.when, studio.currentTpl, t) })}
-                        </p>
-                      ) : null}
-                    </div>
-                  )
-                })}
+      <div className="space-y-2.5">
+        {filtered.map((group) => {
+          const open = q ? true : isGroupOpen(collapsed, group.name)
+          return (
+            <div key={group.name}>
+              <div className="mb-1.5 flex w-full items-center gap-1.5 rounded-md border border-border/60 bg-muted/35 px-1.5 py-1">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                  onClick={() => {
+                    if (!q) toggle(group.name)
+                  }}
+                  aria-expanded={open}
+                  data-param-group={group.name}
+                >
+                  <span className="w-3 shrink-0 text-[11px] leading-none text-muted-foreground">{open ? "▾" : "▸"}</span>
+                  <span className="block min-w-0 truncate text-xs font-semibold">{group.label ?? t(group.name)}</span>
+                </button>
               </div>
-            )}
-          </div>
-        )
-      })}
+              {open && (
+                <div className="ml-1.5 space-y-2 pl-2 pt-0.5">
+                  {group.items.map((param) => {
+                    const hidden = !studio.visibleParam(param.when)
+                    return (
+                      <div key={param.key}>
+                        <ParamControl studio={studio} param={param} />
+                        {hidden ? (
+                          <p className="hint-text mt-1 pl-0.5 text-amber-600 dark:text-amber-400">
+                            {t("当前隐藏 · 需先{reason}", { reason: hiddenReason(param.when, studio.currentTpl, t) })}
+                          </p>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 export function ParamControl({ studio, param }: { studio: StudioApi; param: TemplateParam }) {
   const { t } = useI18n()
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const value = studio.paramValue(param.key) ?? param.def
   if (param.type === "switch") {
     // Most switches persist booleans, but some template params use the
@@ -320,19 +301,21 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
           ? { value: pair.slice(0, divider), label: t(pair.slice(divider + 1)) }
           : { value: pair, label: t(pair) }
       })
+    const selectedValue = String(value ?? "")
+    const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? t("选择")
     return (
       <div className="flex items-center gap-3" data-param-key={param.key}>
         <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
         <Select
-          value={String(value)}
+          value={selectedValue}
           onValueChange={(next) => studio.actions.setParamValue(param.key, String(next))}
         >
           <SelectTrigger size="sm" className="w-[190px]">
-            <SelectValue placeholder={t("选择")} />
+            <SelectValue placeholder={t("选择")}>{selectedLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value} label={option.label}>
                 {option.label}
               </SelectItem>
             ))}
@@ -367,23 +350,45 @@ export function ParamControl({ studio, param }: { studio: StudioApi; param: Temp
   }
 
   if (param.type === "color") {
+    const hex = hexNorm(value) ?? "#000000"
     return (
-      <div className="flex items-center gap-3" data-param-key={param.key}>
-        <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
-        <input
-          type="color"
-          className="size-7 cursor-pointer rounded-md border border-input bg-background p-0.5"
-          value={hexNorm(value) ?? "#000000"}
-          onChange={(event) => studio.actions.setParamValue(param.key, event.target.value)}
+      <>
+        <div className="flex items-center gap-3" data-param-key={param.key}>
+          <span className="field-label min-w-0 flex-1 truncate">{t(param.label)}</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="color-chip h-auto px-2 py-1.5"
+            onClick={() => setColorPickerOpen(true)}
+            title={t("{label} {value} · 点击修改", { label: t(param.label), value: hex })}
+          >
+            <span
+              className="size-5 shrink-0 rounded-md ring-1 ring-black/10"
+              style={{ background: hex }}
+            />
+            <span className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">
+              {hex}
+            </span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => studio.actions.setParamValue(param.key, "")}
+          >
+            {t("自动")}
+          </Button>
+        </div>
+        <ColorPickerDialog
+          open={colorPickerOpen}
+          colorKey={param.key}
+          color={hex}
+          alpha={1}
+          onChange={(_key, nextHex) => studio.actions.setParamValue(param.key, nextHex)}
+          onClose={() => setColorPickerOpen(false)}
+          title={t(param.label)}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => studio.actions.setParamValue(param.key, "")}
-        >
-          {t("自动")}
-        </Button>
-      </div>
+      </>
     )
   }
 

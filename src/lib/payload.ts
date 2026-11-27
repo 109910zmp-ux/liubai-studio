@@ -2,6 +2,7 @@ import { tr } from "@/i18n"
 import { PAGE_NAME } from "./constants"
 import type { Colors } from "./constants"
 import { paperColorsForTone } from "./palette"
+import { templateTitle } from "./templates"
 import type { ParamValues, Shot, StudioPayload, Template, ThemeMeta, Tone } from "./types"
 
 export function shotPage(shot: Shot, index: number, template: Template | null) {
@@ -9,6 +10,10 @@ export function shotPage(shot: Shot, index: number, template: Template | null) {
   const slot = template?.slots?.[index]
   if (slot?.page) return slot.page
   return shot.page || "photo"
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
 }
 
 interface BuildPayloadOptions {
@@ -34,26 +39,46 @@ export function buildPayload({
 }: BuildPayloadOptions): StudioPayload {
   const used = shots.slice(0, template?.count ?? 6)
   const resolved: ParamValues = {}
+  const coverOverrides: Record<string, unknown> = {}
 
   template?.params.forEach((definition) => {
     const value = definition.key in params ? params[definition.key] : definition.def
     // Some switches (e.g. watermark) persist "on"/"off" strings rather than
     // booleans; keep that value intact so the template's wmEnabled() can read it.
+    let result: string | number | boolean
     if (definition.type === "switch") {
-      if (value === "on" || value === "off") resolved[definition.key] = value
-      else resolved[definition.key] = value === true || value === "true"
+      result = value === "on" || value === "off" ? value : value === true || value === "true"
+    } else if (definition.type === "range") {
+      result = Number.parseFloat(String(value))
+    } else {
+      result = value
     }
-    else if (definition.type === "range") resolved[definition.key] = Number.parseFloat(String(value))
-    else resolved[definition.key] = value
+    resolved[definition.key] = result
+    if (definition.key.startsWith("cover.")) {
+      coverOverrides[definition.key.slice(6)] = result
+    }
   })
+
+  // Imported templates carry their own demo payload (book, note, goal …).
+  // Keep those type-specific roots and overlay only the data this studio owns.
+  const imported = template?.imported === true
+  const mock: Record<string, unknown> =
+    imported && template?.mock && isRecord(template.mock) ? template.mock : {}
+  const mockTheme = isRecord(mock.theme) ? mock.theme : {}
+  const mockProfile = isRecord(mock.profile) ? mock.profile : {}
+  const mockAppearance = isRecord(mock.appearance) ? mock.appearance : {}
+  const mockColorTheme = isRecord(mockAppearance.colorTheme) ? mockAppearance.colorTheme : {}
 
   // Paper tone is a rendering concern: derive a readable sheet from the palette
   // instead of rewriting the palette when the user switches light/dark.
   const paper = paperColorsForTone(colors, tone)
+  const sharer = meta.sharer.trim()
 
-  return {
+  const payload: StudioPayload = {
+    ...(imported ? mock : {}),
     theme: {
-      name: meta.name,
+      ...(imported ? mockTheme : {}),
+      name: meta.name.trim() || templateTitle(template),
       description: meta.description,
       author: meta.author,
       colors: {
@@ -63,7 +88,11 @@ export function buildPayload({
         primary: paper.primary,
       },
     },
-    profile: { nickname: meta.sharer },
+    profile: {
+      ...(imported ? mockProfile : {}),
+      nickname: meta.sharer,
+      ...(sharer ? { name: sharer } : {}),
+    },
     urlText: meta.urlText.trim(),
     screens: used.map((shot, index) => {
       const pageKey = shotPage(shot, index, template)
@@ -86,8 +115,26 @@ export function buildPayload({
       }
     }),
     params: resolved,
-    appearance: {},
+    appearance: imported
+      ? {
+          ...mockAppearance,
+          colorTheme: {
+            ...mockColorTheme,
+            backgroundColor: colors.backgroundColor,
+            textColor: colors.foregroundColor,
+            mutedColor: colors.primaryColor,
+          },
+        }
+      : {},
     tone,
     lang,
   }
+
+  if (imported && template?.type === "cover") {
+    payload.cover = {
+      ...(isRecord(mock.cover) ? mock.cover : {}),
+      ...coverOverrides,
+    }
+  }
+  return payload
 }

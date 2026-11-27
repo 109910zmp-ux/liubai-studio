@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import type { ColorKey } from "@/lib/constants"
 import { SWATCHES } from "@/lib/constants"
 import { hexNorm, hsvToRgb, hx, rgb, rgbToHsv } from "@/lib/color"
 import { clamp } from "@/lib/math"
@@ -21,13 +20,15 @@ export function ColorPickerDialog({
   alpha,
   onChange,
   onClose,
+  title,
 }: {
   open: boolean
-  colorKey: ColorKey | null
+  colorKey: string | null
   color: string
   alpha: number
-  onChange: (key: ColorKey, hex: string, alpha: number) => void
+  onChange: (key: string, hex: string, alpha: number) => void
   onClose: () => void
+  title?: string
 }) {
   const { t } = useI18n()
   const [hue, setHue] = useState(0)
@@ -125,7 +126,7 @@ export function ColorPickerDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="picker-dialog sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("选择颜色")}</DialogTitle>
+          <DialogTitle>{title || t("选择颜色")}</DialogTitle>
         </DialogHeader>
         <div
           className="picker-area mt-4"

@@ -1,3 +1,4 @@
+import { FileTextIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/i18n"
 import { Card } from "@/components/ui/card"
@@ -7,12 +8,15 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { StudioApi } from "@/hooks/useStudio"
 import { COLOR_LABELS } from "@/lib/constants"
 import type { ColorKey } from "@/lib/constants"
+import { allTemplateMetaEntries, templateMetaLabel, templateMetaValue } from "@/lib/templates"
 import type { Tone } from "@/lib/types"
-import { Field } from "./shared"
 
 export function ColorSection({ studio }: { studio: StudioApi }) {
   const { actions, refs } = studio
   const { t } = useI18n()
+  // One card lists every declared meta (including settings/config values)
+  // so the template's full information is visible at a glance.
+  const allMetaEntries = allTemplateMetaEntries(studio.currentTpl)
   return (
     <div className="space-y-4">
       <div>
@@ -22,8 +26,39 @@ export function ColorSection({ studio }: { studio: StudioApi }) {
           className="w-full"
           value={studio.name}
           onChange={(event) => studio.setName(event.target.value)}
-          placeholder={t("留空则不显示标题")}
+          placeholder={t("留空则显示模板内置标题")}
         />
+      </div>
+
+      <div>
+        <Card className="gap-0 overflow-hidden py-0 shadow-none">
+          <div className="flex items-center gap-2 border-b px-3 py-2">
+            <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="text-xs font-medium">{t("模板信息")}</span>
+            <span className="ml-auto rounded-full bg-background px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+              {allMetaEntries.length}
+            </span>
+          </div>
+          {allMetaEntries.length ? (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 p-3">
+              {allMetaEntries.map((entry) => (
+                <div key={entry.name} className="min-w-0">
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {t(templateMetaLabel(entry.name))}
+                  </div>
+                  <div
+                    className="mt-0.5 truncate font-mono text-xs tabular-nums"
+                    title={entry.content}
+                  >
+                    {t(templateMetaValue(entry.name, entry.content)) || "—"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="p-3 text-xs text-muted-foreground">{t("模板未声明额外信息")}</p>
+          )}
+        </Card>
       </div>
 
       <div>
@@ -52,7 +87,7 @@ export function ColorSection({ studio }: { studio: StudioApi }) {
             </Button>
           ))}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -80,108 +115,49 @@ export function ColorSection({ studio }: { studio: StudioApi }) {
           <ToggleGroupItem value="light">{t("浅色")}</ToggleGroupItem>
           <ToggleGroupItem value="dark">{t("深色")}</ToggleGroupItem>
         </ToggleGroup>
-        <p className="hint-text mt-2">{t("只影响作品的纸面明暗，不改变配色本身。")}</p>
       </div>
 
-      <details className="group border-t pt-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
-          <span>{t("高级 · 作品信息与配色导入")}</span>
-          <span className="transition-transform group-open:rotate-90">›</span>
-        </summary>
-        <div className="mt-3 space-y-4">
-          <div className="space-y-2">
-            <Field label={t("主题简介")}>
-              <Input
-                className="min-w-0 flex-1"
-                value={studio.description}
-                onChange={(event) => studio.setDescription(event.target.value)}
-                placeholder={t("导入配色时自动带入")}
-              />
-            </Field>
-            <Field label={t("主题作者")}>
-              <Input
-                className="min-w-0 flex-1"
-                value={studio.author}
-                onChange={(event) => studio.setAuthor(event.target.value)}
-                placeholder={t("导入配色时自动带入")}
-              />
-            </Field>
-            <Field label={t("分享者")}>
-              <Input
-                className="min-w-0 flex-1"
-                value={studio.sharer}
-                onChange={(event) => studio.setSharer(event.target.value)}
-                placeholder={t("手动填写")}
-              />
-            </Field>
-            <Field label={t("地址栏")}>
-              <Input
-                className="min-w-0 flex-1"
-                value={studio.urlText}
-                onChange={(event) => studio.setUrlText(event.target.value)}
-                placeholder={t("留空自动生成")}
-              />
-            </Field>
-          </div>
-
-          <Card className="p-3 shadow-none">
-            <Textarea
-              value={studio.jsonRaw}
-              onChange={(event) => studio.setJsonRaw(event.target.value)}
-              onPaste={(event) => {
-                const value = event.clipboardData.getData("text")
-                studio.setJsonRaw(value)
-                actions.applyJson(value)
-              }}
-              rows={3}
-              className="min-h-20 resize-y font-mono"
-              placeholder={t("把主题配色 JSON 粘在这里，或点下面的「从剪贴板粘贴」")}
-            />
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText()
-                    if (!text) {
-                      studio.setJsonStatus(t("剪贴板是空的"))
-                      return
-                    }
-                    studio.setJsonRaw(text)
-                    actions.applyJson(text)
-                  } catch {
-                    studio.setJsonStatus(t("浏览器不允许读取剪贴板，请手动粘贴到输入框。"))
+      <div className="space-y-2">
+        <h4 className="section-subtitle">{t("配色导入")}</h4>
+        <Card className="p-3 shadow-none">
+          <Textarea
+            value={studio.jsonRaw}
+            onChange={(event) => studio.setJsonRaw(event.target.value)}
+            onPaste={(event) => {
+              const value = event.clipboardData.getData("text")
+              studio.setJsonRaw(value)
+              actions.applyJson(value)
+            }}
+            rows={3}
+            className="min-h-20 resize-y font-mono"
+            placeholder={t("把主题配色 JSON 粘在这里，或点下面的「从剪贴板粘贴」")}
+          />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                try {
+                  const text = await navigator.clipboard.readText()
+                  if (!text) {
+                    studio.setJsonStatus(t("剪贴板是空的"))
+                    return
                   }
-                }}
-              >
-                {t("从剪贴板粘贴")}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => refs.jsonFile.current?.click()}>
-                {t("选择文件")}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => actions.applyJson(studio.jsonRaw)}>
-                {t("应用")}
-              </Button>
-              <input
-                ref={refs.jsonFile}
-                type="file"
-                accept="application/json,.json,.txt"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (!file) return
-                  void file.text().then((text) => {
-                    studio.setJsonRaw(text)
-                    actions.applyJson(text)
-                  })
-                  event.target.value = ""
-                }}
-              />
-            </div>
-            <p className="hint-text mt-3">{studio.jsonStatus}</p>
-          </Card>
-        </div>
-      </details>
+                  studio.setJsonRaw(text)
+                  actions.applyJson(text)
+                } catch {
+                  studio.setJsonStatus(t("浏览器不允许读取剪贴板，请手动粘贴到输入框。"))
+                }
+              }}
+            >
+              {t("从剪贴板粘贴")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => actions.applyJson(studio.jsonRaw)}>
+              {t("应用")}
+            </Button>
+          </div>
+          <p className="hint-text mt-3">{studio.jsonStatus}</p>
+        </Card>
+      </div>
     </div>
   )
 }

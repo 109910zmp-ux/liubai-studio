@@ -66,6 +66,11 @@ export const zhToEn: Record<string, string> = {
   "2 · 预览操作": "2 · Preview controls",
   "3 · 编辑与恢复": "3 · Editing & recovery",
   "4 · 导出": "4 · Export",
+  "2 · 素材与配色": "2 · Assets & colors",
+  "3 · 排版模板与参数": "3 · Layouts & parameters",
+  "4 · 预览与编辑": "4 · Preview & editing",
+  "5 · 导出": "5 · Export",
+  "6 · 快捷键与提示": "6 · Shortcuts & tips",
   "在「素材」拖入或选择截图；导入素材不会改动你已有的配色。":
     "Drop or choose screenshots in Assets. Importing never changes your palette.",
   "在「排版模板」挑选版式，素材数量变化时会自动切换到能容纳的模板。":
@@ -101,10 +106,53 @@ export const zhToEn: Record<string, string> = {
     "PNGs exported with 3D showcase keep every asset; no images are dropped.",
   "按 Esc 可关闭弹窗或颜色选择器；导出的 PNG 可直接在 iOS / iPadOS 分享与保存。":
     "Press Esc to close dialogs or the color picker. Exported PNGs can be shared or saved on iOS / iPadOS.",
+  "在「素材」导入截图；支持一次选择多张，导入不会改动已有配色。":
+    "Import screenshots under Assets; you can select several at once, and importing never changes your existing palette.",
+  "在「排版模板」挑选版式；素材数量变化时会自动切换到能容纳的模板。":
+    "Pick a layout under Layouts; when the asset count changes, a fitting template is selected automatically.",
+  "用「模板参数」「配色」微调视觉，再点顶栏「导出」输出 PNG、视频或批量 ZIP。":
+    "Fine-tune with Parameters and Colors, then use Export in the top bar to output a PNG, video, or batch ZIP.",
+  "素材支持 PNG / JPG / WEBP；HEIC 请先转为 JPG。拖动缩略图可调整顺序，页面标签可快捷切换。":
+    "Assets support PNG / JPG / WEBP; convert HEIC to JPG first. Drag thumbnails to reorder, and use page chips for quick switching.",
+  "点击色块打开 HSV 取色器，色值以大写 HEX 显示；「从图片取色」会按当前素材生成配色并覆盖现有颜色。":
+    "Click a swatch to open the HSV picker; values are shown as uppercase HEX. Extract colors derives a palette from the current assets and overwrites the existing colors.",
+  "纸面明暗只影响作品纸面，不改变配色本身；配色 JSON 可粘贴或从顶栏「导入」载入。":
+    "Paper tone affects only the poster paper, not the palette itself; paste color JSON or load it from the top-bar Import button.",
+  "配色的主题名字留空时，导出会使用模板内置标题。":
+    "If the theme name under Colors is left empty, exports use the template's built-in title.",
+  "内置排版与导入模板统一管理；顶栏「导入」左侧直接选文件，右侧箭头可展开「导入文件」或「导入模板文件夹」，按类型自动放入素材、模板、配色、项目或字体面板。":
+    "Built-in layouts and imported templates are managed together. On the top-bar Import split button, the left side picks files directly and the right arrow opens Import files / Import template folder; files are routed to Assets, Layouts, Colors, Projects, or Fonts by type.",
+  "导入模板请统一用顶栏「导入」；需要保留来源目录时选「导入模板文件夹」。模板面板的「自动分组」左侧按当前方式执行，右侧箭头可切换内置名称、导入文件夹名称或文件名，选择后立即分组。":
+    "Use the top-bar Import button for all template imports; choose Import template folder to keep the source directory. On the Layouts panel, the left side of Auto-group runs the current mode, and the right arrow switches between built-in name, imported folder name, or file name and groups immediately.",
+  "点击 ⋯ 或长按模板可上移、下移、移动分组或删除；分组标题可折叠，垃圾桶可删除整个分组。":
+    "Click ⋯ or long-press a template to move it up/down, move it to another group, or delete it; group titles can be folded, and the trash icon deletes the whole group.",
+  "参数面板支持搜索、分组折叠与一键预设；手动调整后预设状态自动取消。":
+    "Parameters support search, collapsible groups, and one-click presets; manual edits clear the preset selection.",
+  "非主题预览模板可用「编辑模板数据」替换内置示例文字与条目；开启「启用 3D 展映」可让卡片错落立体展示。":
+    "Non-theme-preview templates offer Edit template data to replace the built-in sample text and entries; Enable 3D showcase renders cards in a staggered 3D layout.",
+  "主预览滚轮缩放、按住拖拽平移；「适应窗口」会重置缩放与位置。":
+    "Scroll the main preview to zoom and drag to pan; Fit to window resets both zoom and position.",
+  "悬浮预览可拖动标题栏移动、拖右下角调整大小、滚轮缩放，并支持最小化与全屏。":
+    "The floating preview can be dragged by its title bar, resized from the bottom-right corner, zoomed by scrolling, minimized, or shown fullscreen.",
+  "「模板参数」可上传本地字体：标题字体在「图文排版」组，水印字体在「水印与质感」组开启水印后上传；水印字体留空时跟随标题字体。":
+    "Parameters accept local fonts: title font under Typography & layout, watermark font under Watermark & texture after enabling the watermark. An empty watermark font follows the title font.",
+  "编辑内容自动存为本机草稿，刷新后可继续；项目对话框可保存或载入 JSON 项目，也可全部重置。":
+    "Edits are saved as a local draft and restored after refresh. The Project dialog saves/loads JSON projects and can reset everything.",
+  "顶栏主题按钮在浅色 / 深色 / 跟随系统之间循环；语言按钮在中英文之间切换。主题只影响界面，语言还会影响模板中跟随界面语言的文字。":
+    "The top-bar theme button cycles Light / Dark / System, and the language button switches between Chinese and English. The theme affects only the interface; the language also affects template text that follows the interface language.",
+  "PNG 可设置宽度；视频可设置时长、帧率与清晰度；批量 ZIP 可选仅 PNG、仅视频或图片 + 视频。":
+    "PNG width is adjustable; video duration, frame rate and quality are configurable. Batch ZIP supports Images only, Video only, or Images + video.",
+  "批量导出按模板容量自动分组打包；视频导出会临时启用 3D 时间轴，完成后恢复原始预览参数。":
+    "Batch export groups files by template capacity; video export temporarily enables the 3D timeline and restores your original preview parameters afterwards.",
+  "视频优先用 WebCodecs 逐帧编码为 MP4，失败时回退浏览器录制；回退时请保持页面在前台。iOS / iPadOS 需 Safari 16.4+，不支持时面板会提示，PNG 与 ZIP 不受影响。":
+    "Video prefers WebCodecs frame-by-frame MP4 encoding and falls back to browser recording if unavailable. Keep the page in the foreground during fallback. iOS / iPadOS need Safari 16.4+; when unsupported, the panel shows a notice, while PNG and ZIP are unaffected.",
+  "开启 3D 展映后导出的 PNG 仍保留全部素材。":
+    "PNGs exported with 3D showcase still include every asset.",
 
   // 配色
+  "配色导入": "Palette import",
   "主题名字": "Theme name",
-  "留空则不显示标题": "Leave empty to hide the title",
+  "留空则显示模板内置标题": "Leave empty to use the template title",
   "颜色": "Colors",
   "主色": "Primary",
   "背景": "Background",
@@ -119,11 +167,24 @@ export const zhToEn: Record<string, string> = {
   "恢复默认": "Restore defaults",
   "纸面明暗": "Paper tone",
   "只影响作品的纸面明暗，不改变配色本身。": "Affects only the poster paper, not the palette itself.",
-  "高级 · 作品信息与配色导入": "Advanced · Theme info & palette import",
   "主题简介": "Description",
   "主题作者": "Author",
   "分享者": "Sharer",
   "地址栏": "Address bar",
+  "模板名称": "Template name",
+  "模板版本": "Template version",
+  "模板类型": "Template type",
+  "画布宽度": "Canvas width",
+  "画布高度": "Canvas height",
+  "画面数量": "Screen count",
+  "画布方向": "Canvas orientation",
+  "输出格式": "Output format",
+  "帧率": "Frame rate",
+  "圆角": "Corner radius",
+  "长图": "Long",
+  "方图": "Square",
+  "模板未声明额外信息": "No extra template information",
+  "模板信息": "Template info",
   "导入配色时自动带入": "Filled in when importing a palette",
   "手动填写": "Enter manually",
   "留空自动生成": "Empty to generate automatically",
@@ -472,4 +533,91 @@ export const zhToEn: Record<string, string> = {
   "截图 {index}": "Screenshot {index}",
   "没有识别到颜色字段": "No color fields detected",
   "无法识别的 when 条件: \"{part}\"，已按显示处理": "Unrecognized when condition \"{part}\"; showing the parameter",
+
+  // 统一导入入口
+  "导入": "Import",
+  "顶栏「导入」可一次选择图片、Reeden HTML、配色 JSON、项目 JSON 或字体，自动放入对应面板；排版模板可一键按内置名称分组。": "Use the top-bar Import button to pick images, Reeden HTML, color JSON, project JSON or fonts at once; files go to the matching panel. Templates can be auto-grouped by their built-in names.",
+  "导入图片、模板、配色、项目或字体，自动放入对应面板": "Import images, templates, colors, projects or fonts into the matching panel",
+  "已导入 {count} 个文件，并按类型放入对应面板": "Imported {count} file(s) into the matching panels",
+  "没有可导入的文件": "No supported files to import",
+  "未识别文件：{names}": "Unrecognized file(s): {names}",
+  "字体读取失败": "Could not read the font",
+  "按内置名称自动分组": "Auto-group by built-in names",
+  "已按内置名称分为 {count} 组": "Grouped into {count} groups by built-in names",
+  "还没有导入模板": "No imported templates yet",
+  "导入模板文件夹": "Import template folder",
+  "导入文件": "Import files",
+  "更多导入方式": "More import options",
+  "自动分组方式": "Auto-grouping mode",
+  "按 {mode} 自动分组": "Auto-group by {mode}",
+  "内置名称": "Built-in name",
+  "导入文件夹名称": "Imported folder name",
+  "文件名": "File name",
+  "自动分组": "Auto-group",
+  "按导入文件夹名称分为 {count} 组": "Grouped into {count} groups by imported folder name",
+  "按文件名分为 {count} 组": "Grouped into {count} groups by file name",
+  "未标记文件夹": "Unknown folder",
+  "未标记文件": "Unknown file",
+  "导入可一次选择多个文件；导入文件夹后可保留来源目录，自动分组可选用内置名称、导入文件夹名称或文件名。":
+    "Import supports multiple files at once. Importing a folder keeps its source directory, so auto-grouping can use the built-in name, folder name, or file name.",
+  "顶栏「导入」可一次选择多个图片、Reeden HTML、配色 JSON、项目 JSON 或字体，自动放入对应面板；旁边的文件夹按钮可导入整个文件夹以保留来源目录，并按内置名称、导入文件夹名称或文件名自动分组。":
+    "Use the top-bar Import button to pick multiple images, Reeden HTML, color JSON, project JSON or fonts at once; files go to the matching panel. The adjacent folder button imports a whole folder to keep its source directory, and auto-grouping can use the built-in name, folder name, or file name.",
+
+  // 导入 Reeden 模板
+  "仅支持 Reeden 单文件 HTML 模板，请只导入可信来源。": "Single-file Reeden HTML templates only. Import trusted sources only.",
+  "导入 Reeden 模板 HTML": "Import Reeden template HTML",
+  "请选择 .html 模板文件": "Choose an .html template file",
+  "模板文件过大（上限 2MB）": "Template file is too large (2 MB limit)",
+  "未找到 ReedenShareTemplate 渲染入口": "ReedenShareTemplate render entry not found",
+  "不支持的模板版本：{version}": "Unsupported template version: {version}",
+  "导入模板": "Imported template",
+  "模板已载入": "Template loaded",
+  "已载入「{name}」· 类型 {type} · {count} 个参数": "Loaded \"{name}\" · type {type} · {count} parameters",
+  "模板导入失败：{error}": "Template import failed: {error}",
+  "模板导入失败": "Template import failed",
+  "已导入 · {name}": "Imported · {name}",
+  "模板数据": "Template data",
+  "模板数据 JSON": "Template data JSON",
+  "应用模板数据": "Apply template data",
+  "编辑模板数据": "Edit template data",
+  "模板数据已更新": "Template data updated",
+  "模板数据必须是 JSON 对象": "Template data must be a JSON object",
+  "JSON 格式不正确": "Invalid JSON",
+  "此类模板使用内置示例数据渲染；改这里即可替换海报里的文字与条目。": "This template renders with its built-in sample data; edit here to replace the poster text and entries.",
+  "内置排版": "Built-in layouts",
+  "导入模板管理": "Imported template",
+  "分组": "Group",
+  "模板分组": "Template group",
+  "应用分组": "Apply group",
+  "删除此模板": "Delete this template",
+  "再次点击确认删除": "Click again to confirm deletion",
+  "模板分组已更新": "Template group updated",
+  "已删除「{name}」": "Deleted \"{name}\"",
+  "模板已删除": "Template deleted",
+  "模板操作": "Template actions",
+  "长按卡片可删除、排序或移动分组；分组标题可折叠。": "Long-press a card to delete, reorder, or move it between groups. Group titles can be folded.",
+  "点击 ⋯ 或长按卡片可删除、排序或移动分组；分组标题可折叠。": "Click the ⋯ button or long-press a card to delete, reorder, or move it between groups. Group titles can be folded.",
+  "点击 ⋯ 或长按模板可删除、排序或移动分组；分组标题可折叠，垃圾桶可删除整个分组。": "Click ⋯ or long-press a template to delete, reorder, or move it between groups. Group titles can be folded; the trash icon deletes the whole group.",
+  "删除分组": "Delete group",
+  "确认删除分组": "Confirm group deletion",
+  "已删除分组「{group}」": "Deleted group \"{group}\"",
+  "分组已删除": "Group deleted",
+  "上移": "Move up",
+  "下移": "Move down",
+  "移动到分组": "Move to group",
+  "新建分组": "New group",
+  "新分组名称": "New group name",
+  "移动": "Move",
+  "模板顺序已更新": "Template order updated",
+  "模板已移动到「{group}」": "Template moved to \"{group}\"",
+  "书评": "Book review",
+  "书单": "Book list",
+  "阅读信息": "Reading statistics",
+  "今日目标": "Daily goal",
+  "年度目标": "Yearly goal",
+  "角色对话": "Character chat",
+  "我的阅读": "My reading",
+  "角色关系": "Character relations",
+  "主题预览": "Theme preview",
+  "封面": "Cover",
 }

@@ -18,7 +18,7 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
         type="button"
         className="drop-zone px-4 py-5 text-center"
         data-hot={hot}
-        onClick={() => refs.fileInput.current?.click()}
+        onClick={() => refs.unifiedFile.current?.click()}
         onDragEnter={(event) => {
           event.preventDefault()
           dragDepth.current += 1
@@ -38,20 +38,7 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
         }}
       >
         <div className="text-sm font-medium">{t("拖入图片，或点击选择")}</div>
-        <div className="hint-text mt-1">{t("支持多张 · PNG / JPG / WEBP（HEIC 请先转为 JPG）")}</div>
       </button>
-      <input
-        ref={refs.fileInput}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(event) => {
-          if (event.target.files) void actions.addFiles(event.target.files)
-          event.target.value = ""
-        }}
-      />
-
       <div className="space-y-2">
         {studio.shots.map((shot, index) => (
           <Card
@@ -139,13 +126,13 @@ export function AssetsSection({ studio }: { studio: StudioApi }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => refs.fileInput.current?.click()}>
+        <Button size="sm" variant="outline" onClick={() => refs.unifiedFile.current?.click()}>
           {t("添加")}
         </Button>
         <Button size="sm" variant="outline" onClick={actions.clearShots}>
           {t("清空")}
         </Button>
-        <span className="hint-text">{t(studio.shots.length ? "拖动缩略图可调整顺序" : "还没有素材")}</span>
+        {studio.shots.length ? null : <span className="hint-text">{t("还没有素材")}</span>}
       </div>
     </div>
   )

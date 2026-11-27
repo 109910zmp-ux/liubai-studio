@@ -426,7 +426,9 @@ function cloneCaptureNode(
   renderNow?.()
   const doc = preview.contentDocument
   if (!doc) throw new Error(tr("预览未就绪"))
-  const target = doc.getElementById("poster") ?? doc.body
+  // Standard Reeden templates mark the real poster with data-reeden-capture;
+  // built-in templates also expose #poster. Keep body as a last resort.
+  const target = doc.querySelector<HTMLElement>("[data-reeden-capture]") ?? doc.getElementById("poster") ?? doc.body
   // Layout dimensions are the capture source of truth. WebKit can report a
   // transformed rect for iframed content; offsetWidth/Height stay stable.
   const width = target.offsetWidth || Math.ceil(target.getBoundingClientRect().width)

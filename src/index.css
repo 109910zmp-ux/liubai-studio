@@ -329,6 +329,29 @@ body {
   white-space: nowrap;
 }
 
+.top-import {
+  gap: 6px;
+}
+
+.top-import-text {
+  white-space: nowrap;
+}
+
+.top-import-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.top-import-arrow {
+  gap: 0;
+  margin-left: -1px;
+}
+
+.top-import-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
 .studio-mark {
   display: block;
   width: 30px;
@@ -648,7 +671,8 @@ body {
   .studio-subbrand,
   .studio-brand,
   .top-video,
-  .top-help-text {
+  .top-help-text,
+  .top-import-text {
     display: none;
   }
 

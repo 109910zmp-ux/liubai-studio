@@ -29,6 +29,22 @@ export interface Template {
   motion: boolean
   params: TemplateParam[]
   slots: TemplateSlot[]
+  /** Standard Reeden meta: note / review / themePreview / cover … */
+  type?: string
+  /** Canvas width declared in meta. Built-in templates keep the 640 fallback. */
+  width?: number
+  canvas?: string
+  imported?: boolean
+  /** User-defined group for imported templates. */
+  group?: string
+  /** Group declared by the template HTML; never changed by user actions. */
+  declaredGroup?: string
+  /** Source HTML file name without extension, used by file-name grouping. */
+  sourceFile?: string
+  /** Immediate folder name captured when the template was imported. */
+  sourceFolder?: string
+  /** Built-in mock payload harvested from an imported template. */
+  mock?: Record<string, unknown>
 }
 
 export interface Shot {
@@ -60,6 +76,8 @@ export interface ThemeMeta {
 export type Tone = "light" | "dark"
 
 export interface StudioPayload {
+  // Imported Reeden templates add type-specific roots (book, note, goal …).
+  [key: string]: unknown
   theme: {
     name: string
     description: string
@@ -83,7 +101,7 @@ export interface StudioPayload {
     detail: string
   }>
   params: ParamValues
-  appearance: Record<string, never>
+  appearance: Record<string, unknown>
   tone: Tone
   lang?: "zh" | "en"
 }
@@ -105,11 +123,26 @@ export interface ThemeImportResult {
   blur: number
 }
 
+/** Minimal portable record; params/type/width are re-derived from the HTML. */
+export interface ImportedTemplateRecord {
+  key: string
+  html: string
+  group?: string
+  /** Source metadata is kept so folder/file grouping survives project reloads. */
+  sourceFile?: string
+  sourceFolder?: string
+  mock?: Record<string, unknown>
+}
+
 export interface ProjectFile {
   app: string
   version: number
   savedAt: string
   template: string | null
+  /** Imported templates are embedded so drafts/project files stay portable. */
+  templateHtml?: string
+  templateData?: Record<string, unknown>
+  importedTemplates?: ImportedTemplateRecord[]
   params: ParamValues
   colors: Colors
   themeName: string

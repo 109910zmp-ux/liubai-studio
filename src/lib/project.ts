@@ -1,10 +1,21 @@
 import { tr } from "@/i18n"
 import { COLOR_LABELS } from "./constants"
 import type { ColorKey, Colors } from "./constants"
-import type { ParamValues, ProjectFile, Shot, ThemeMeta, Tone } from "./types"
+import type {
+  ImportedTemplateRecord,
+  ParamValues,
+  ProjectFile,
+  Shot,
+  Template,
+  ThemeMeta,
+  Tone,
+} from "./types"
 
 export function projectJson(data: {
   templateKey: string | null
+  templateHtml?: string
+  templateData?: Record<string, unknown>
+  importedTemplates?: Template[]
   params: ParamValues
   colors: Colors
   meta: ThemeMeta
@@ -16,6 +27,20 @@ export function projectJson(data: {
     version: 1,
     savedAt: new Date().toISOString(),
     template: data.templateKey,
+    templateHtml: data.templateHtml,
+    templateData: data.templateData,
+    importedTemplates: data.importedTemplates?.length
+      ? data.importedTemplates
+          .filter((item) => item.imported)
+          .map((item) => ({
+            key: item.key,
+            html: item.html,
+            group: item.group,
+            sourceFile: item.sourceFile,
+            sourceFolder: item.sourceFolder,
+            mock: item.mock,
+          }))
+      : undefined,
     params: data.params,
     colors: data.colors,
     themeName: data.meta.name,
@@ -38,6 +63,9 @@ export function projectJson(data: {
 
 export interface LoadedProject {
   templateKey: string | null
+  templateHtml?: string
+  templateData?: Record<string, unknown>
+  importedTemplates?: ImportedTemplateRecord[]
   params: ParamValues
   colors: Colors
   meta: ThemeMeta
@@ -88,8 +116,28 @@ export function loadProject(value: unknown, nextId: () => string): LoadedProject
     if (colors[key]) colors[key] = colors[key]
   })
 
+  const importedTemplates = Array.isArray(raw.importedTemplates)
+    ? raw.importedTemplates.flatMap((item): ImportedTemplateRecord[] => {
+        if (!item || typeof item.html !== "string") return []
+        return [{
+          key: typeof item.key === "string" ? item.key : "",
+          html: item.html,
+          group: typeof item.group === "string" && item.group.trim() ? item.group.trim() : undefined,
+          sourceFile: typeof item.sourceFile === "string" && item.sourceFile.trim() ? item.sourceFile.trim() : undefined,
+          sourceFolder: typeof item.sourceFolder === "string" && item.sourceFolder.trim() ? item.sourceFolder.trim() : undefined,
+          mock:
+            item.mock && typeof item.mock === "object" && !Array.isArray(item.mock)
+              ? (item.mock as Record<string, unknown>)
+              : undefined,
+        }]
+      })
+    : undefined
+
   return {
     templateKey: raw.template || null,
+    templateHtml: typeof raw.templateHtml === "string" ? raw.templateHtml : undefined,
+    templateData: raw.templateData && typeof raw.templateData === "object" ? raw.templateData : undefined,
+    importedTemplates,
     params: raw.params || {},
     colors,
     tone: raw.tone === "dark" ? "dark" : "light",
