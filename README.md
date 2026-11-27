@@ -26,6 +26,7 @@
   - [快捷键](#快捷键)
 - [数据格式示例](#数据格式示例)
   - [主题配色 JSON](#主题配色-json)
+  - [Reeden 模板 HTML](#reeden-模板-html)
   - [项目文件 JSON](#项目文件-json)
 - [项目结构](#项目结构)
 - [常见问题](#常见问题)
@@ -43,8 +44,9 @@
 
 ## 功能特性
 
-- **多套排版模板**：内置 3 图、4 图、6 图三套版式，素材数量变化时自动切换可容纳的模板。
-- **丰富的模板参数**：支持开关、下拉、滑杆、颜色、文本、文件六类参数，覆盖 3D 展映、卡片外观、图文排版、**水印与质感**等分组，支持搜索与分组折叠。
+- **多套排版模板**：内置 3 图、4 图、6 图三套版式，素材数量变化时自动切换可容纳的模板；也可导入 Reeden 单文件 HTML 模板，与内置模板统一管理。
+- **丰富的模板参数**：支持开关、下拉、滑杆、颜色、文本、图片、字体七类参数，覆盖 3D 展映、卡片外观、图文排版、**水印与质感**等分组，支持搜索与分组折叠。
+- **导入 Reeden 模板**：顶栏「导入」可载入 Reeden 单文件 HTML 模板，自动解析元数据、参数与屏幕配置；支持导入整个文件夹保留来源目录，并按内置名称 / 文件夹名 / 文件名一键自动分组；模板元数据会内嵌进项目文件，跨设备可移植。
 - **自定义字体**：标题字体（图文排版组）与水印字体（水印与质感组）可上传本地 `.ttf` / `.otf` / `.woff`，导出产物同样生效；水印字体留空时自动跟随标题字体。
 - **图片 / 文字水印**：文字水印可调字体、浓度；图片水印作为可调节大小的平铺层覆盖整张海报。
 - **一键风格预设**：原始 / 杂志感 / 极简展映 / 胶片颗粒 / 玻璃拟态。
@@ -121,8 +123,8 @@ npm run preview
 
 ### 基本流程
 
-1. 在左侧「素材」面板拖入或选择截图。
-2. 在「排版模板」挑选版式。
+1. 点击顶栏「导入」选择截图（也可在左侧「素材」面板拖入）。同一入口还支持一次选择 Reeden 模板 HTML、配色 JSON、项目文件或字体，会自动放入对应面板。
+2. 在「排版模板」挑选版式（内置或已导入的 Reeden 模板）。
 3. 用「模板参数」「配色」「底色」调整视觉效果。
 4. 点击顶栏「导出」或左侧「导出」面板，选择 PNG、视频或批量 ZIP。
 
@@ -137,12 +139,23 @@ npm run preview
 ### 模板与参数
 
 - 内置三套模板：**3 图**、**4 图**、**6 图**。素材数量变化时会自动切换到能容纳全部素材的模板。
-- 「模板参数」面板提供分组与搜索，核心分组默认展开，细调分组默认折叠，展开状态会被记住。参数类型涵盖：开关、下拉、滑杆、颜色、文本、**文件上传**（字体 / 图片）。
+- 「模板参数」面板提供分组与搜索，核心分组默认展开，细调分组默认折叠，展开状态会被记住。参数类型涵盖：开关、下拉、滑杆、颜色、文本、图片、字体。
 - 「风格预设」可一键套用整组参数，手动调整后预设状态自动取消。
 - **水印与质感**分组（开启水印后显示）：
   - 文字水印：开关、文字、字体（系统下拉 / 自定义上传 `.ttf` / `.otf` / `.woff`）、浓度（%）。
   - 图片水印：上传图片，作为平铺覆盖整张海报，可调大小（%）。
   - 水印自定义字体留空时，自动跟随「图文排版」分组的标题字体。
+
+#### 导入 Reeden 模板
+
+除内置 3 / 4 / 6 图模板外，还可导入 Reeden 单文件 HTML 模板，与内置模板在同一面板统一管理：
+
+- **入口**：顶栏「导入」按钮选择 `.html` / `.htm` 文件；右侧下拉箭头可选「导入模板文件夹」，用文件夹选择器导入整个目录以保留来源路径。
+- **识别要求**：模板 HTML 必须声明 `ReedenShareTemplate` 渲染入口，且 `reeden-template-version` 为 `1`；单文件上限 2 MB；只导入可信来源。
+- **自动解析**：从 `<meta name="reeden-template-*">` 读取类型（笔记 / 书评 / 书单 / 阅读信息 / 今日目标 / 年度目标 / 角色对话 / 我的阅读 / 角色关系 / 主题预览 / 封面）、名称、画布宽度、屏幕配置，并从 `<meta data-red-param>` 提取参数（类型、标签、默认值、分组、选项、范围、显示条件）。
+- **模板信息卡片**：选中导入模板后展示其全部 `reeden-template-*` 元数据，便于核对。
+- **自动分组**：模板面板「自动分组」左侧按当前方式执行，右侧箭头切换分组依据——**内置名称**（模板自带 group / 类型 / 名称前缀）、**导入文件夹名称**、**文件名**，选择后立即分组。
+- **管理**：导入模板可在组内上下排序、移动到其他组、重命名组、单独删除或删除整个组；分组与排序会随项目文件保存。
 
 ### 配色与主题 JSON
 
@@ -177,6 +190,7 @@ npm run preview
 
 - **草稿**：编辑内容自动保存到浏览器 IndexedDB，刷新后自动恢复；「项目」对话框可清空草稿。
 - **项目文件**：保存为 JSON，包含素材、模板、参数与配色，可跨设备完整恢复（不包含草稿状态）。
+- **导入模板可移植**：若使用了导入的 Reeden 模板，其 HTML 原文与分组 / 来源元数据会一并内嵌进项目文件，换设备载入项目即可恢复，无需重新导入模板。
 - **全部重置**：在「项目」对话框的「全部重置」按钮可一键清空素材、参数、配色与本机草稿，恢复到初始状态。按钮带有 4 秒二次确认，且重置后仍可通过撤销找回操作。
 
 ### 快捷键
@@ -225,6 +239,47 @@ npm run preview
 
 其他可读字段：`mode`（`dark` / `light`）、`name` / `title`、`description` / `desc` / `intro`、`author`、`nickname` / `sharer`、`cardBackgroundBlur`。
 
+### Reeden 模板 HTML
+
+导入的 Reeden 模板是一个**自包含的单文件 HTML**：宿主契约全部声明在 `<meta>` 标签里，无需额外 schema。最小可用结构如下：
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- 必需：版本固定为 1 -->
+    <meta name="reeden-template-version" content="1" />
+    <meta name="reeden-template-name" content="我的模板" />
+    <meta name="reeden-template-type" content="themePreview" />
+    <meta name="reeden-template-width" content="640" />
+    <meta name="reeden-template-canvas" content="long" />
+    <meta name="reeden-template-group" content="我的分组" />
+    <meta name="reeden-template-screens" content='[{"label":"1","page":"home"},{"label":"2","page":"reader"}]' />
+    <!-- 参数声明：param.* 进入 payload.params，cover.* 进入 payload.cover -->
+    <meta data-red-param="param.primaryColor" data-red-type="color" data-red-label="主色"
+          data-red-default="#8B8174" data-red-group="配色" />
+    <meta data-red-param="cover.title" data-red-type="text" data-red-label="封面标题"
+          data-red-default="" data-red-group="封面" />
+  </head>
+  <body>
+    <div class="poster" data-reeden-capture id="poster"></div>
+    <script>
+      // 必需：渲染入口，接收 makePayload 产出的载荷
+      window.ReedenShareTemplate = { render(payload) { /* 渲染海报 */ } }
+    </script>
+  </body>
+</html>
+```
+
+关键约定：
+
+- `reeden-template-version` 必须为 `1`，否则导入会被拒绝（提示「不支持的模板版本」）。
+- `window.ReedenShareTemplate.render(payload)` 是渲染入口，缺失会提示「未找到 ReedenShareTemplate 渲染入口」。
+- `data-red-type` 支持 `switch` / `select` / `range` / `color` / `text` / `image` / `font`；不识别时按 `text` 处理。
+- `data-red-when` 可声明参数的显示条件，`data-red-options` 以下拉选项（逗号分隔）。
+- 其他 `reeden-template-*` 元数据（如 `output`、`duration`、`fps`、`radius` 等）不会进入参数面板，但会在「模板信息卡片」中展示。
+
 ### 项目文件 JSON
 
 「项目」对话框保存的项目文件结构如下：
@@ -250,9 +305,25 @@ npm run preview
   "urlText": "",
   "sharer": "",
   "tone": "light",
-  "shots": []
+  "shots": [],
+  "templateHtml": null,
+  "templateData": null,
+  "importedTemplates": []
 }
 ```
+
+> 当当前模板是导入的 Reeden 模板时，`templateHtml` 为该模板的 HTML 原文，`templateData` 为模板的 mock 数据，`importedTemplates` 为所有导入模板的可移植记录：
+>
+> ```json
+> {
+>   "key": "imported-themePreview-abc123",
+>   "html": "<!doctype html>...",
+>   "group": "我的分组",
+>   "sourceFile": "my-template",
+>   "sourceFolder": "themes",
+>   "mock": {}
+> }
+> ```
 
 ## 项目结构
 
@@ -265,7 +336,7 @@ liubai-studio/
 │   ├── index.css                    # 全局样式 + safe-area / dvh 适配
 │   ├── components/
 │   │   ├── studio/                  # 工作室各面板与共用组件（素材 / 模板 / 参数 / 配色 / 导出 / 颜色选择器）
-│   │   └── ui/                      # 基础 UI 组件（基于 Base UI；button、dialog、slider 等共 18 件）
+│   │   └── ui/                      # 基础 UI 组件（基于 Base UI；button、dialog、slider、dropdown-menu 等共 19 件）
 │   ├── i18n/
 │   │   ├── index.tsx                # 语言上下文与切换（中 / 英，localStorage 记忆）
 │   │   └── dictionary.ts            # 中文源文案到英文的映射表
@@ -277,7 +348,7 @@ liubai-studio/
 │   │   ├── exporter.ts              # PNG / 视频 / 批量 ZIP 导出（WebCodecs + MediaRecorder 双引擎，支持取消）
 │   │   ├── fontSubset.ts            # 导出时按需裁剪字体（HarfBuzz WASM）
 │   │   ├── harfbuzz-subset.wasm     # 字体子集化 WASM 模块
-│   │   ├── templates.ts             # 由单一模板 base 渲染 3/4/6 图与参数求值
+│   │   ├── templates.ts             # 模板构建 / 参数求值 / 解析导入的 Reeden HTML
 │   │   ├── project.ts               # 项目文件（JSON）读写
 │   │   ├── draft.ts                 # 草稿（IndexedDB）
 │   │   ├── palette.ts               # 取色与配色分析
@@ -350,6 +421,18 @@ iOS 26+ 的 MediaRecorder MP4 接口存在已知的冻结问题，这正是新�
 
 **Q：导出到一半能取消吗？**
 可以。导出期间导出面板会显示「取消导出」按钮与进度条；取消后当前任务立即停止，且不会生成任何不完整的文件。
+
+**Q：如何导入 Reeden 模板？**
+点击顶栏「导入」选择 `.html` / `.htm` 单文件模板即可；需要保留来源目录时，点导入按钮右侧的下拉箭头选「导入模板文件夹」。导入的模板会出现在「排版模板」面板，与内置模板一起管理。
+
+**Q：导入模板提示「未找到 ReedenShareTemplate 渲染入口」或「不支持的模板版本」？**
+模板必须是声明了 `window.ReedenShareTemplate` 渲染入口的单文件 HTML，且 `<meta name="reeden-template-version">` 的值为 `1`。请确认模板来源可信、未被裁剪或改坏；单文件上限 2 MB。
+
+**Q：导入的模板会保存吗？换设备要重新导入吗？**
+导入模板在当前浏览器会话内可用；如果把它选入作品并保存项目文件，模板的 HTML 与分组元数据会内嵌进项目 JSON，在新设备载入该项目即可自动恢复，无需手动重新导入。
+
+**Q：「自动分组」的三种方式有什么区别？**
+模板面板「自动分组」右侧箭头可切换分组依据：**内置名称**优先用模板自带的 `reeden-template-group`，其次模板类型，再回退名称前缀；**导入文件夹名称**用导入时所在文件夹名（仅文件夹导入有效）；**文件名**用去掉扩展名的 HTML 文件名。选择后立即对当前组重新分组。
 
 ## 贡献指南
 
